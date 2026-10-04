@@ -85,6 +85,8 @@ export const api = {
 
   me: () => request<CurrentUser>('GET', '/api/v1/auth/me'),
 
+  authOptions: () => request<{ allowPublicSignUp: boolean }>('GET', '/api/v1/auth/options'),
+
   posts: (filters: PostFilters = {}) =>
     request<Paged<PostSummary>>('GET', `/api/v1/posts${query({ ...filters })}`),
 

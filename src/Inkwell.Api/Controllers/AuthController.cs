@@ -1,8 +1,11 @@
 using Inkwell.Application.Auth;
 using Inkwell.Application.Auth.Dtos;
 using Inkwell.Application.Common;
+using Inkwell.Api.Common;
+using Inkwell.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Inkwell.Api.Controllers;
 
@@ -12,18 +15,29 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _auth;
     private readonly ICurrentUser _currentUser;
+    private readonly AccountOptions _accounts;
 
-    public AuthController(IAuthService auth, ICurrentUser currentUser)
+    public AuthController(IAuthService auth, ICurrentUser currentUser, IOptions<AccountOptions> accounts)
     {
         _auth = auth;
         _currentUser = currentUser;
+        _accounts = accounts.Value;
     }
+
+    /// <summary>What the client needs to know before it decides which sign-in and sign-up prompts to show.</summary>
+    [HttpGet("options")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthOptionsDto), StatusCodes.Status200OK)]
+    public ActionResult<AuthOptionsDto> Options() => Ok(new AuthOptionsDto(_accounts.AllowPublicSignUp));
 
     /// <summary>Creates an account and returns a signed token.</summary>
     [HttpPost("register")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request, CancellationToken ct)
     {
+        // Enforced here, not just hidden in the UI: a closed site must refuse direct API calls too.
+        if (!_accounts.AllowPublicSignUp) throw new ForbiddenException("Sign-ups are closed.");
+
         var response = await _auth.RegisterAsync(request, ct);
         return Created($"/api/v1/users/{response.User.Handle}", response);
     }
@@ -40,3 +54,5 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<CurrentUserDto>> Me(CancellationToken ct) =>
         Ok(await _auth.GetCurrentAsync(_currentUser.RequireUserId(), ct));
 }
+
+public sealed record AuthOptionsDto(bool AllowPublicSignUp);

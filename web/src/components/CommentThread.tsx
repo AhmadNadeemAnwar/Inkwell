@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function CommentThread({ postId, comments, onChanged }: Props) {
-  const { user } = useAuth()
+  const { user, allowPublicSignUp } = useAuth()
   const [body, setBody] = useState('')
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [replyBody, setReplyBody] = useState('')
@@ -72,11 +72,11 @@ export function CommentThread({ postId, comments, onChanged }: Props) {
             {busy ? 'Posting…' : 'Respond'}
           </button>
         </form>
-      ) : (
+      ) : allowPublicSignUp ? (
         <p className="muted">
           <Link to="/login">Sign in</Link> to join the conversation.
         </p>
-      )}
+      ) : null}
 
       <div style={{ marginTop: '1.5rem' }}>
         {comments.map((comment) => (

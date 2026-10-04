@@ -38,6 +38,8 @@ builder.Services.AddSwaggerWithBearer();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+builder.Services.Configure<AccountOptions>(builder.Configuration.GetSection(AccountOptions.SectionName));
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 

@@ -13,7 +13,9 @@ import { safeImageSrc } from '../lib/safeUrl'
 
 export function PostPage() {
   const { slug = '' } = useParams()
-  const { user } = useAuth()
+  const { user, allowPublicSignUp } = useAuth()
+  // On a closed site visitors cannot sign in, so actions that require an account are not offered.
+  const canEngage = Boolean(user) || allowPublicSignUp
   const navigate = useNavigate()
 
   const post = useAsync(() => api.post(slug), [slug])
@@ -105,15 +107,21 @@ export function PostPage() {
         )}
 
         <div className="actionbar">
-          <button className={`btn${viewer?.hasClapped ? ' btn--active' : ''}`} onClick={clap} aria-label="Clap for this post">
-            👏 {local.clapCount}
-          </button>
+          {canEngage ? (
+            <button className={`btn${viewer?.hasClapped ? ' btn--active' : ''}`} onClick={clap} aria-label="Clap for this post">
+              👏 {local.clapCount}
+            </button>
+          ) : (
+            <span className="faint" aria-label={`${local.clapCount} claps`}>👏 {local.clapCount}</span>
+          )}
           <span className="faint" style={{ fontSize: '0.85rem' }}>{local.commentCount} responses</span>
           <span className="actionbar__spacer" />
           <CopyLinkButton url={`${window.location.origin}/p/${local.slug}`} />
-          <button className={`btn${viewer?.hasBookmarked ? ' btn--active' : ''}`} onClick={toggleBookmark}>
-            {viewer?.hasBookmarked ? 'Saved' : 'Save'}
-          </button>
+          {canEngage && (
+            <button className={`btn${viewer?.hasBookmarked ? ' btn--active' : ''}`} onClick={toggleBookmark}>
+              {viewer?.hasBookmarked ? 'Saved' : 'Save'}
+            </button>
+          )}
         </div>
       </article>
 

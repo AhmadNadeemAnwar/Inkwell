@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { Avatar } from './ui'
 
 export function Layout() {
-  const { user, logout } = useAuth()
+  const { user, logout, allowPublicSignUp } = useAuth()
   const navigate = useNavigate()
   const [term, setTerm] = useState('')
 
@@ -44,12 +44,12 @@ export function Layout() {
                   Sign out
                 </button>
               </>
-            ) : (
+            ) : allowPublicSignUp ? (
               <>
                 <Link className="btn btn--ghost" to="/login">Sign in</Link>
                 <Link className="btn btn--primary" to="/register">Get started</Link>
               </>
-            )}
+            ) : null}
           </nav>
         </div>
       </header>

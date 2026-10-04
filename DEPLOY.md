@@ -104,6 +104,20 @@ write a post, publish it, then open the post link in a private window.
   better to accept the cold start.
 - When you outgrow free tiers, the app needs no changes: only the Render plan and Neon plan move.
 
+## Public sign-up is closed
+
+The deployed site is read-only for visitors: no Sign in, Get started or "Start writing" prompts, no
+clap or Save buttons, and no comment box. The API refuses sign-ups too (`403`), so hiding the buttons
+is not the only protection. This is the default in Production (`Accounts:AllowPublicSignUp` is
+`false` in `appsettings.Production.json`).
+
+**To write or manage posts, sign in at `https://inkwell.ahmadnadeem.dev/login`.** The page still
+exists but nothing links to it, so bookmark it. Sessions last 24 hours.
+
+**To open sign-ups again**, set `Accounts__AllowPublicSignUp` to `true` in Render's environment
+variables and let it redeploy. The prompts come back by themselves, because the web app asks the
+API what the policy is. If the API cannot be reached the web app assumes "closed" and shows nothing.
+
 ## Security configuration
 
 ### One-time Cloudflare settings (dashboard, free)

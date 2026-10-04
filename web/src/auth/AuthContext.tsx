@@ -7,6 +7,13 @@ interface AuthContextValue {
   user: CurrentUser | null
   /** True until the stored token has been checked, so guarded routes do not flash the login page. */
   loading: boolean
+  /**
+   * Whether visitors may create accounts. Set by the API, which also enforces it. While unknown, or if the
+   * API cannot be reached, this is false so no sign-in or sign-up prompt flashes up on a closed site.
+   */
+  allowPublicSignUp: boolean
+  /** True once the API has answered, so the sign-up page does not briefly show "not found" while waiting. */
+  signUpPolicyKnown: boolean
   login: (email: string, password: string) => Promise<void>
   register: (input: { email: string; handle: string; displayName: string; password: string; turnstileToken?: string }) => Promise<void>
   logout: () => void
@@ -18,6 +25,15 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<CurrentUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [allowPublicSignUp, setAllowPublicSignUp] = useState(false)
+  const [signUpPolicyKnown, setSignUpPolicyKnown] = useState(false)
+
+  useEffect(() => {
+    api.authOptions()
+      .then((options) => setAllowPublicSignUp(options.allowPublicSignUp))
+      .catch(() => setAllowPublicSignUp(false))
+      .finally(() => setSignUpPolicyKnown(true))
+  }, [])
 
   useEffect(() => {
     if (!getToken()) {
@@ -50,8 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, setUser: setUserState }),
-    [user, loading, login, register, logout],
+    () => ({ user, loading, allowPublicSignUp, signUpPolicyKnown, login, register, logout, setUser: setUserState }),
+    [user, loading, allowPublicSignUp, signUpPolicyKnown, login, register, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

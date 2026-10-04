@@ -6,7 +6,7 @@ import { ErrorNote } from '../components/ui'
 import { Turnstile, turnstileEnabled } from '../components/Turnstile'
 
 export function LoginPage() {
-  const { login } = useAuth()
+  const { login, allowPublicSignUp } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -49,9 +49,11 @@ export function LoginPage() {
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
 
-        <p className="muted" style={{ fontSize: '0.9rem', marginTop: '1rem' }}>
-          New here? <Link to="/register">Create an account</Link>
-        </p>
+        {allowPublicSignUp && (
+          <p className="muted" style={{ fontSize: '0.9rem', marginTop: '1rem' }}>
+            New here? <Link to="/register">Create an account</Link>
+          </p>
+        )}
       </form>
     </main>
   )

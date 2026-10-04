@@ -10,7 +10,7 @@ import { useAuth } from '../auth/AuthContext'
 type Feed = PostSort | 'Following'
 
 export function HomePage() {
-  const { user } = useAuth()
+  const { user, allowPublicSignUp } = useAuth()
   const [feed, setFeed] = useState<Feed>('Latest')
 
   const posts = useAsync(
@@ -68,7 +68,7 @@ export function HomePage() {
             {tags.data?.map((tag) => <TagPill key={tag.id} tag={tag} />)}
           </div>
 
-          {!user && (
+          {!user && allowPublicSignUp && (
             <div className="card" style={{ marginTop: '2rem' }}>
               <p style={{ marginTop: 0 }}>Write about anything you know.</p>
               <Link className="btn btn--primary btn--block" to="/register">Start writing</Link>

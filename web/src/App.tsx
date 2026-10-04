@@ -33,6 +33,15 @@ function LazyEditor() {
   )
 }
 
+/** On a closed site the sign-up page does not exist, so it answers like any other unknown address. */
+function RegisterRoute() {
+  const { allowPublicSignUp, signUpPolicyKnown } = useAuth()
+
+  if (!signUpPolicyKnown) return <main className="main"><Spinner /></main>
+  if (!allowPublicSignUp) return <main className="main"><EmptyState title="Page not found" /></main>
+  return <RegisterPage />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -48,7 +57,7 @@ export default function App() {
                 below outrank this one, so /login, /write etc. are unaffected. */}
             <Route path="/:handle" element={<ProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/register" element={<RegisterRoute />} />
 
             <Route path="/write" element={<RequireAuth><LazyEditor /></RequireAuth>} />
             <Route path="/write/:id" element={<RequireAuth><LazyEditor /></RequireAuth>} />

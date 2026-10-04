@@ -4,9 +4,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using Inkwell.Api.Common;
+using Inkwell.Application.Auth;
+using Inkwell.Application.Auth.Dtos;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Inkwell.Tests.Api;
@@ -15,14 +18,21 @@ namespace Inkwell.Tests.Api;
 /// Boots the real API in the Production configuration (what Render runs), against a throwaway SQLite
 /// file, so the middleware pipeline is exercised end to end rather than assumed.
 /// </summary>
-public sealed class ApiFactory : WebApplicationFactory<Program>
+public class ApiFactory : WebApplicationFactory<Program>
 {
     public const string AllowedOrigin = "https://inkwell.example.com";
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"inkwell-test-{Guid.NewGuid():N}.db");
 
+    /// <summary>
+    /// Production ships with public sign-up closed. Most tests need to create accounts, so they open it;
+    /// <see cref="ClosedApiFactory"/> returns null to run with the real shipped default.
+    /// </summary>
+    protected virtual bool? SignUpOverride => true;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Production");
+        if (SignUpOverride is { } open) builder.UseSetting("Accounts:AllowPublicSignUp", open.ToString());
         builder.UseSetting("Jwt:Key", new string('k', 48));
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={_dbPath}");
         builder.UseSetting("Security:CheckPwnedPasswords", "false");
@@ -37,6 +47,12 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             try { File.Delete(_dbPath + suffix); } catch (IOException) { }
         }
     }
+}
+
+/// <summary>The API exactly as shipped: Production configuration with nothing overridden.</summary>
+public sealed class ClosedApiFactory : ApiFactory
+{
+    protected override bool? SignUpOverride => null;
 }
 
 public class PipelineTests : IClassFixture<ApiFactory>
@@ -230,6 +246,16 @@ public class PipelineTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task The_options_endpoint_reports_that_sign_up_is_open_when_it_is()
+    {
+        var response = await Send(HttpMethod.Get, "/api/v1/auth/options", NewIp());
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("allowPublicSignUp").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Tokens_issued_by_the_api_last_one_day()
     {
         var ip = NewIp();
@@ -281,4 +307,88 @@ public class ClientIpTests
     public void Ipv6_addresses_are_normalised() =>
         ClientIp.Resolve(Context("10.0.0.5", ("CF-Connecting-IP", "2001:DB8:0:0:0:0:0:1")), ["CF-Connecting-IP"])
             .Should().Be("2001:db8::1");
+}
+
+/// <summary>
+/// The site as deployed: public sign-up closed. Hiding the buttons is not protection, so these tests
+/// go straight to the API.
+/// </summary>
+public class ClosedSignUpTests : IClassFixture<ClosedApiFactory>
+{
+    private static int _ipCounter = 100;
+    private readonly ClosedApiFactory _factory;
+    private readonly HttpClient _client;
+
+    public ClosedSignUpTests(ClosedApiFactory factory)
+    {
+        _factory = factory;
+        _client = factory.CreateClient();
+    }
+
+    private static string NewIp() => $"198.51.100.{Interlocked.Increment(ref _ipCounter)}";
+
+    private Task<HttpResponseMessage> Post(string path, object body, string? token = null)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
+        request.Headers.Add("CF-Connecting-IP", NewIp());
+        if (token is not null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return _client.SendAsync(request);
+    }
+
+    private static object Registration(string handle) =>
+        new { email = $"{handle}@example.com", handle, displayName = "Visitor", password = "correct horse battery staple" };
+
+    [Fact]
+    public async Task The_shipped_production_configuration_has_public_sign_up_closed()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/options");
+        request.Headers.Add("CF-Connecting-IP", NewIp());
+
+        var response = await _client.SendAsync(request);
+
+        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("allowPublicSignUp").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task A_direct_api_call_cannot_create_an_account()
+    {
+        var response = await Post("/api/v1/auth/register", Registration("sneaky-visitor"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Sign-ups are closed");
+
+        // And nothing was created behind the refusal.
+        var login = await Post("/api/v1/auth/login", new { email = "sneaky-visitor@example.com", password = "correct horse battery staple" });
+        login.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task An_existing_account_can_still_sign_in_and_use_its_token()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IAuthService>().RegisterAsync(
+                new RegisterRequest("owner@example.com", "the-owner", "The Owner", "correct horse battery staple"));
+        }
+
+        var login = await Post("/api/v1/auth/login", new { email = "owner@example.com", password = "correct horse battery staple" });
+        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        var token = JsonDocument.Parse(await login.Content.ReadAsStringAsync()).RootElement.GetProperty("token").GetString();
+
+        var me = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        me.Headers.Add("CF-Connecting-IP", NewIp());
+        me.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        (await _client.SendAsync(me)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Reading_the_site_still_works_for_anonymous_visitors()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/posts");
+        request.Headers.Add("CF-Connecting-IP", NewIp());
+
+        (await _client.SendAsync(request)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 }

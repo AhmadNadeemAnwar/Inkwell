@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "inkwell-admin",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Any path that is not a real file serves index.html, so deep links and refreshes work.
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    { "pattern": "admin.ahmadnadeem.dev", "custom_domain": true }
+  ]
+}

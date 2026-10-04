@@ -20,6 +20,9 @@ public sealed class PortfolioOptions
     public string Branch { get; set; } = "main";
     public string ContentRoot { get; set; } = "src/content";
 
+    /// <summary>Only needed for GitHub Enterprise or testing. Must be https, or http on localhost.</summary>
+    public string ApiBaseUrl { get; set; } = "https://api.github.com";
+
     /// <summary>
     /// A fine-grained GitHub token limited to that one repository with Contents: read and write.
     /// A secret: set it as an environment variable on the host, never in a file or in chat.
@@ -50,7 +53,24 @@ public sealed partial class GitHubPortfolioContentStore : IPortfolioContentStore
 
     private PortfolioOptions Options => _options.CurrentValue;
 
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(Options.Token) && RepoPattern().IsMatch(Options.Repo ?? string.Empty);
+    public bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(Options.Token)
+        && RepoPattern().IsMatch(Options.Repo ?? string.Empty)
+        && BaseUrl is not null;
+
+    /// <summary>The token is only ever sent over https, or to this same machine; anything else is treated as misconfiguration.</summary>
+    private string? BaseUrl
+    {
+        get
+        {
+            var configured = string.IsNullOrWhiteSpace(Options.ApiBaseUrl) ? "https://api.github.com" : Options.ApiBaseUrl.Trim();
+            if (!Uri.TryCreate(configured, UriKind.Absolute, out var uri)) return null;
+
+            var local = uri.IsLoopback;
+            if (uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && local)) return null;
+            return configured.TrimEnd('/');
+        }
+    }
     public string? Repo => IsConfigured ? Options.Repo : null;
     public string? Branch => IsConfigured ? Options.Branch : null;
     public string ContentRoot => string.IsNullOrWhiteSpace(Options.ContentRoot) ? "src/content" : Options.ContentRoot;
@@ -120,7 +140,7 @@ public sealed partial class GitHubPortfolioContentStore : IPortfolioContentStore
         if (segments.Any(s => s is "." or ".."))
             throw new DomainException("That file path is not allowed.");
 
-        return $"https://api.github.com/repos/{Options.Repo}/contents/{string.Join('/', segments.Select(Uri.EscapeDataString))}";
+        return $"{BaseUrl}/repos/{Options.Repo}/contents/{string.Join('/', segments.Select(Uri.EscapeDataString))}";
     }
 
     private string RefQuery() => $"?ref={Uri.EscapeDataString(Options.Branch)}";

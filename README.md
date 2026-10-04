@@ -38,6 +38,12 @@ sign in as `maya@example.com` to look around, or register a new account.
 dotnet test inkwell/tests/Inkwell.Tests
 ```
 
+## Admin portal
+
+`admin/` is a separate private site (deployed to `admin.ahmadnadeem.dev`) for moderating posts, comments
+and topics, viewing stats, and editing the portfolio's blog, projects and updates. It signs in with a
+password plus an authenticator-app code. Setup, usage and the security model are in [ADMIN.md](ADMIN.md).
+
 ## Architecture
 
 ```

@@ -58,6 +58,34 @@ public class GitHubStoreTests
         handler.Calls.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("https://api.github.com", true)]
+    [InlineData("https://github.example.com/api/v3/", true)]
+    [InlineData("http://localhost:4599", true)]
+    [InlineData("http://127.0.0.1:4599/", true)]
+    [InlineData("http://github.example.com", false)]
+    [InlineData("http://api.github.com", false)]
+    [InlineData("ftp://api.github.com", false)]
+    [InlineData("not a url", false)]
+    public void The_token_is_only_ever_sent_over_https_or_to_this_machine(string baseUrl, bool accepted)
+    {
+        var store = Store(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)),
+            new PortfolioOptions { Repo = "owner/repo", Token = Token, ApiBaseUrl = baseUrl });
+
+        store.IsConfigured.Should().Be(accepted);
+    }
+
+    [Fact]
+    public async Task A_custom_api_address_is_used_for_requests()
+    {
+        var handler = new StubHandler(_ => Json(HttpStatusCode.NotFound, new { message = "Not Found" }));
+        var store = Store(handler, new PortfolioOptions { Repo = "owner/repo", Token = Token, ApiBaseUrl = "http://localhost:4599/" });
+
+        await store.GetAsync("src/content/blog/a.md");
+
+        handler.Calls.Single().Request.RequestUri!.ToString().Should().StartWith("http://localhost:4599/repos/owner/repo/contents/");
+    }
+
     // ---- Reading -------------------------------------------------------------------------
 
     [Fact]

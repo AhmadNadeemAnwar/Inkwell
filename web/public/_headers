@@ -1,0 +1,21 @@
+# Cloudflare Workers static assets reads this file and applies it to every response.
+#
+# connect-src names the API origin. If the Render service is ever renamed or recreated, update it
+# here and in .env.production together, or the browser will block every API call.
+#
+# style-src needs 'unsafe-inline' because React renders style="" attributes. Scripts are fully
+# locked down: no inline script, no eval, and the only outside origin is Cloudflare Turnstile.
+# img-src allows any https host because authors may link cover images and avatars from anywhere.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://inkwell-zpbc.onrender.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin
+
+# Filenames under /assets are content-hashed, so they can be cached forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

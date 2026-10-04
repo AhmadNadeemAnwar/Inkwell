@@ -25,8 +25,18 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required.")
-            .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
-            .MaximumLength(128);
+            .MaximumLength(PasswordPolicy.MaxLength);
+
+        RuleFor(x => x)
+            .Custom((request, context) =>
+            {
+                if (string.IsNullOrEmpty(request.Password)) return;
+
+                var problem = PasswordPolicy.Check(request.Password, request.Email ?? "", request.Handle ?? "", request.DisplayName ?? "");
+                if (problem is not null) context.AddFailure(nameof(RegisterRequest.Password), problem);
+            });
+
+        RuleFor(x => x.TurnstileToken).MaximumLength(2048);
     }
 }
 

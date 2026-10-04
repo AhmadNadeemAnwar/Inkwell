@@ -41,6 +41,17 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, JwtTokenService>();
 
+        services.AddSingleton<ILoginAttemptTracker, InMemoryLoginAttemptTracker>();
+
+        services.Configure<TurnstileOptions>(configuration.GetSection(TurnstileOptions.SectionName));
+        services.AddHttpClient<ITurnstileVerifier, TurnstileVerifier>();
+
+        // On by default; switch off (Security:CheckPwnedPasswords=false) for offline development.
+        if (configuration.GetValue("Security:CheckPwnedPasswords", true))
+            services.AddHttpClient<IPwnedPasswordChecker, PwnedPasswordChecker>();
+        else
+            services.AddSingleton<IPwnedPasswordChecker, DisabledPwnedPasswordChecker>();
+
         return services;
     }
 }

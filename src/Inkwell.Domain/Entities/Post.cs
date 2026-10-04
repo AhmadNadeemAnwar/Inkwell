@@ -62,6 +62,8 @@ public class Post : BaseEntity
         if (title.Trim().Length > MaxTitleLength) throw new DomainException($"Title cannot exceed {MaxTitleLength} characters.");
         if (subtitle is { Length: > MaxSubtitleLength }) throw new DomainException($"Subtitle cannot exceed {MaxSubtitleLength} characters.");
         if (string.IsNullOrWhiteSpace(contentJson)) throw new DomainException("Content is required.");
+        if (!string.IsNullOrWhiteSpace(coverImageUrl) && !UrlRules.IsHttps(coverImageUrl))
+            throw new DomainException("Cover image must be a link starting with https://.");
 
         Title = title.Trim();
         Subtitle = string.IsNullOrWhiteSpace(subtitle) ? null : subtitle.Trim();

@@ -5,13 +5,22 @@ import { PostList } from '../components/PostCard'
 import { Avatar, EmptyState, ErrorNote, Spinner } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../auth/AuthContext'
+import { safeHref } from '../lib/safeUrl'
 
 export function ProfilePage() {
-  const { handle = '' } = useParams()
+  const { handle: segment = '' } = useParams()
+  // The URL segment is "@name"; anything without the "@" is not a profile address.
+  const handle = segment.startsWith('@') ? segment.slice(1) : ''
   const { user } = useAuth()
 
-  const profile = useAsync(() => api.profile(handle), [handle])
-  const posts = useAsync(() => api.posts({ author: handle, pageSize: 20 }), [handle])
+  const profile = useAsync(
+    () => (handle ? api.profile(handle) : Promise.reject(new Error('This page does not exist.'))),
+    [handle],
+  )
+  const posts = useAsync(
+    () => (handle ? api.posts({ author: handle, pageSize: 20 }) : Promise.resolve(null)),
+    [handle],
+  )
 
   const [following, setFollowing] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
@@ -48,9 +57,9 @@ export function ProfilePage() {
           <h1 style={{ fontFamily: 'var(--font-read)', margin: 0 }}>{p.displayName}</h1>
           <p className="faint" style={{ margin: '0.1rem 0' }}>@{p.handle}</p>
           {p.bio && <p style={{ margin: '0.5rem 0 0' }}>{p.bio}</p>}
-          {p.websiteUrl && (
+          {safeHref(p.websiteUrl) && (
             <p style={{ margin: '0.35rem 0 0' }}>
-              <a href={p.websiteUrl} target="_blank" rel="noopener noreferrer">{p.websiteUrl}</a>
+              <a href={safeHref(p.websiteUrl)} target="_blank" rel="noopener noreferrer nofollow">{p.websiteUrl}</a>
             </p>
           )}
           <div className="profile__stats">

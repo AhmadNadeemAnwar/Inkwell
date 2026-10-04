@@ -4,6 +4,7 @@ using Inkwell.Application.Auth.Dtos;
 using Inkwell.Application.Common;
 using Inkwell.Domain.Entities;
 using Inkwell.Domain.Exceptions;
+using Inkwell.Infrastructure.Security;
 using Moq;
 using Xunit;
 
@@ -13,6 +14,9 @@ public class AuthServiceTests : IDisposable
 {
     private readonly TestDatabase _fixture = new();
     private readonly AuthService _service;
+    private readonly FakePwnedPasswordChecker _pwned = new();
+    private readonly FakeTurnstileVerifier _turnstile = new();
+    private readonly InMemoryLoginAttemptTracker _attempts = new();
 
     public AuthServiceTests()
     {
@@ -20,7 +24,7 @@ public class AuthServiceTests : IDisposable
         tokens.Setup(t => t.Create(It.IsAny<User>()))
             .Returns(new AccessToken("test-token", DateTimeOffset.UtcNow.AddHours(1)));
 
-        _service = new AuthService(_fixture.Users, new FakePasswordHasher(), tokens.Object, _fixture.Db);
+        _service = new AuthService(_fixture.Users, new FakePasswordHasher(), tokens.Object, _fixture.Db, _pwned, _turnstile, _attempts);
     }
 
     private static RegisterRequest Registration(string email = "New@Example.com", string handle = "New Writer") =>

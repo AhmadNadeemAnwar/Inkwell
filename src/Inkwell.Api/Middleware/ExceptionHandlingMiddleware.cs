@@ -40,6 +40,7 @@ public sealed class ExceptionHandlingMiddleware
             NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
             ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
+            TooManyRequestsException => (StatusCodes.Status429TooManyRequests, "Too many requests"),
             DomainException => (StatusCodes.Status400BadRequest, "Invalid request"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };

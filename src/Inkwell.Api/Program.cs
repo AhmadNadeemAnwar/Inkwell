@@ -1,5 +1,4 @@
 using System.Text;
-using System.Threading.RateLimiting;
 using Inkwell.Api.Common;
 using Inkwell.Api.Extensions;
 using Inkwell.Api.Filters;
@@ -70,28 +69,8 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// Anti-abuse: throttle writes only. Reads are cheap and browsing should never hit a limit.
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-    {
-        if (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
-            return RateLimitPartition.GetNoLimiter("reads");
-
-        // Partition per signed-in user, falling back to remote IP for anonymous callers.
-        var key = context.User.FindFirst("handle")?.Value
-                  ?? context.Connection.RemoteIpAddress?.ToString()
-                  ?? "anonymous";
-
-        return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 30,
-            Window = TimeSpan.FromMinutes(1)
-        });
-    });
-});
+// Per-client, per-endpoint-kind limits: tight on sign-in and sign-up, looser on reads.
+builder.Services.AddInkwellRateLimiting(builder.Configuration);
 
 builder.Services.AddCors(options => options.AddPolicy(CorsPolicy, policy => policy
     .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"])
@@ -102,10 +81,13 @@ builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 
 var app = builder.Build();
 
-// Behind a reverse proxy (Render, Cloudflare) the socket peer is the proxy, so the real client IP
-// and scheme only arrive in X-Forwarded-* headers. Without this, rate limiting would put every
-// visitor in one shared bucket keyed on the proxy's address.
+// Behind a reverse proxy the socket peer is the proxy, so the original scheme arrives in
+// X-Forwarded-Proto. (The client address used for rate limiting is resolved separately, from the
+// platform's trusted header; see ClientIp.)
 app.UseForwardedHeaders();
+
+app.UseMiddleware<SecurityHeadersMiddleware>(app.Environment.IsDevelopment());
+if (!app.Environment.IsDevelopment()) app.UseHsts();
 
 // Registered first so it wraps everything downstream, including routing failures.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -134,3 +116,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// Exposes the entry point to the integration-test host.
+public partial class Program;

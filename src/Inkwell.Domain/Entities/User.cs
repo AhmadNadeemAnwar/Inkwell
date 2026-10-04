@@ -35,6 +35,10 @@ public class User : BaseEntity
     {
         if (string.IsNullOrWhiteSpace(displayName)) throw new DomainException("Display name is required.");
         if (bio is { Length: > 300 }) throw new DomainException("Bio cannot exceed 300 characters.");
+        if (!string.IsNullOrWhiteSpace(avatarUrl) && !UrlRules.IsHttps(avatarUrl))
+            throw new DomainException("Avatar must be a link starting with https://.");
+        if (!string.IsNullOrWhiteSpace(websiteUrl) && !UrlRules.IsHttpOrHttps(websiteUrl))
+            throw new DomainException("Website must be a link starting with http:// or https://.");
 
         DisplayName = displayName.Trim();
         Bio = string.IsNullOrWhiteSpace(bio) ? null : bio.Trim();

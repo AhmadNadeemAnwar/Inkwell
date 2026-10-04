@@ -72,3 +72,30 @@ public sealed class FakePasswordHasher : IPasswordHasher
     public string Hash(string password) => $"hashed:{password}";
     public bool Verify(string password, string hash) => hash == $"hashed:{password}";
 }
+
+public sealed class FakePwnedPasswordChecker : IPwnedPasswordChecker
+{
+    public HashSet<string> Breached { get; } = new(StringComparer.Ordinal);
+    public Task<bool> IsPwnedAsync(string password, CancellationToken ct = default) => Task.FromResult(Breached.Contains(password));
+}
+
+public sealed class FakeTurnstileVerifier : ITurnstileVerifier
+{
+    public bool IsEnabled { get; set; }
+    public bool Passes { get; set; } = true;
+    public string? LastToken { get; private set; }
+
+    public Task<bool> VerifyAsync(string? token, CancellationToken ct = default)
+    {
+        LastToken = token;
+        return Task.FromResult(Passes);
+    }
+}
+
+/// <summary>A clock the test advances by hand.</summary>
+public sealed class ManualTimeProvider : TimeProvider
+{
+    private DateTimeOffset _now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+    public override DateTimeOffset GetUtcNow() => _now;
+    public void Advance(TimeSpan by) => _now += by;
+}

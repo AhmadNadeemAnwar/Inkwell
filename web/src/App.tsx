@@ -43,7 +43,10 @@ export default function App() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/tag/:slug" element={<TagPage />} />
             <Route path="/p/:slug" element={<PostPage />} />
-            <Route path="/@:handle" element={<ProfilePage />} />
+            {/* React Router cannot match a partial segment like "/@:handle", so profiles take the
+                whole segment and ProfilePage requires the leading "@". Static routes above and
+                below outrank this one, so /login, /write etc. are unaffected. */}
+            <Route path="/:handle" element={<ProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Author, Tag } from '../api/types'
+import { safeImageSrc } from '../lib/safeUrl'
 
 export function Avatar({ author, large = false }: { author: Pick<Author, 'displayName' | 'avatarUrl'>; large?: boolean }) {
   const initials = author.displayName
@@ -9,12 +10,15 @@ export function Avatar({ author, large = false }: { author: Pick<Author, 'displa
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
 
-  if (author.avatarUrl) {
+  const avatarSrc = safeImageSrc(author.avatarUrl)
+
+  if (avatarSrc) {
     return (
       <img
         className={large ? 'avatar avatar--lg' : 'avatar'}
-        src={author.avatarUrl}
+        src={avatarSrc}
         alt=""
+        referrerPolicy="no-referrer"
         style={{ objectFit: 'cover' }}
       />
     )

@@ -103,3 +103,54 @@ write a post, publish it, then open the post link in a private window.
 - Keeping the API awake with a pinger would use roughly the whole 750-hour allowance, so it is
   better to accept the cold start.
 - When you outgrow free tiers, the app needs no changes: only the Render plan and Neon plan move.
+
+## Security configuration
+
+### One-time Cloudflare settings (dashboard, free)
+
+1. **SSL/TLS > Edge Certificates > Always Use HTTPS: On.** Without it,
+   `http://inkwell.ahmadnadeem.dev` answers in plain text instead of redirecting.
+2. The site also sends an HSTS header, so browsers stick to HTTPS after the first visit.
+
+### Optional: Turnstile bot check on sign-up (free)
+
+Off until you configure it, and everything works without it.
+
+1. Cloudflare dashboard > **Turnstile > Add widget**. Hostname: `inkwell.ahmadnadeem.dev`.
+2. Put the **site key** in `web/.env.production` as `VITE_TURNSTILE_SITE_KEY`, then rebuild and
+   `npx.cmd wrangler deploy`.
+3. Put the **secret key** in Render as `Turnstile__SecretKey`.
+
+### How the protections work
+
+| Control | Where | Notes |
+|---|---|---|
+| Rate limits | API | Sign-in 10/min, sign-up 5/hour, search 30/min, other reads 300/min, writes 30/min, each per client |
+| Real client address | API | Read from `CF-Connecting-IP` (set in `appsettings.Production.json`). Render sits behind Cloudflare, which always overwrites that header |
+| Account lockout | API | 10 wrong passwords on one account in 15 minutes locks it for the rest of the window, whichever addresses the attempts came from |
+| Password rules | API | 10+ characters, not a common password, not built from your name/handle/email, not in a known breach (checked via haveibeenpwned's k-anonymity API, so only 5 characters of a hash leave the server) |
+| URL allow-list | API + web | Profile websites must be http(s); avatars and cover images must be https |
+| Security headers | Cloudflare (`web/public/_headers`) and API middleware | CSP, nosniff, frame denial, HSTS, referrer policy |
+| Session tokens | API | Valid for 24 hours (`Jwt__ExpiryMinutes` to change) |
+
+### Verify the rate limiter after deploying
+
+The limiter only works if the API can see each visitor's real address. Confirm it on the live
+API (a clean run shows ten `400`s, then `429`s):
+
+```bash
+for i in $(seq 1 14); do curl -s -o /dev/null -w "%{http_code} " -X POST https://<your-service>.onrender.com/api/v1/auth/login -H "Content-Type: application/json" -d "{\"email\":\"user$i@example.com\",\"password\":\"x\"}"; done
+```
+
+If you never see a `429`, Render is not forwarding `CF-Connecting-IP`; the limiter then falls back to
+the proxy's address. Account lockout still protects every account in that case.
+
+### Known limits
+
+- Session tokens live in the browser's local storage. Moving them to HttpOnly cookies needs the API
+  on a same-site domain (for example `api.ahmadnadeem.dev`); on a separate `onrender.com` domain
+  browsers block those cookies. The strict CSP and 24-hour expiry limit the exposure meanwhile.
+- Tokens cannot be revoked before they expire.
+- Sign-up does not verify email ownership; that needs an email provider.
+- Registering reveals whether an email is already taken. The 5-per-hour sign-up limit makes
+  harvesting slow; email verification is the real fix.

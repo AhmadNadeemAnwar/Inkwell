@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { isHttpsUrl, isSafeLink } from '../lib/safeUrl'
 
 interface Mark {
   type: string
@@ -74,8 +75,8 @@ function RenderNode({ node }: { node: Node }): ReactNode {
 
     case 'image': {
       const src = typeof node.attrs?.src === 'string' ? node.attrs.src : null
-      if (!src || !isSafeUrl(src)) return null
-      return <img src={src} alt={typeof node.attrs?.alt === 'string' ? node.attrs.alt : ''} />
+      if (!src || !isHttpsUrl(src)) return null
+      return <img src={src} alt={typeof node.attrs?.alt === 'string' ? node.attrs.alt : ''} referrerPolicy="no-referrer" loading="lazy" />
     }
 
     default:
@@ -94,18 +95,11 @@ function applyMarks(text: string, marks: Mark[] | undefined): ReactNode {
       case 'code': return <code>{node}</code>
       case 'link': {
         const href = typeof mark.attrs?.href === 'string' ? mark.attrs.href : null
-        if (!href || !isSafeUrl(href)) return node
+        if (!href || !isSafeLink(href)) return node
         // noopener/noreferrer: reader-authored links must not get a handle on this window.
         return <a href={href} target="_blank" rel="noopener noreferrer nofollow">{node}</a>
       }
       default: return node
     }
   }, text)
-}
-
-/** Blocks javascript: and data: URLs, which are the usual vectors in user-supplied links. */
-function isSafeUrl(url: string): boolean {
-  const trimmed = url.trim().toLowerCase()
-  return trimmed.startsWith('http://') || trimmed.startsWith('https://')
-    || trimmed.startsWith('/') || trimmed.startsWith('mailto:')
 }

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { ErrorNote } from '../components/ui'
+import { Turnstile, turnstileEnabled } from '../components/Turnstile'
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -62,6 +63,9 @@ export function RegisterPage() {
   const [form, setForm] = useState({ displayName: '', handle: '', email: '', password: '' })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  // Tokens are single-use, so a failed attempt needs a fresh widget (and a fresh token).
+  const [turnstileKey, setTurnstileKey] = useState(0)
 
   function update(field: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -72,10 +76,12 @@ export function RegisterPage() {
     setBusy(true)
     setError(null)
     try {
-      await register(form)
+      await register({ ...form, turnstileToken: turnstileToken ?? undefined })
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create your account.')
+      setTurnstileToken(null)
+      setTurnstileKey((key) => key + 1)
     } finally {
       setBusy(false)
     }
@@ -109,11 +115,13 @@ export function RegisterPage() {
         <div className="field">
           <label htmlFor="reg-password">Password</label>
           <input id="reg-password" type="password" autoComplete="new-password" value={form.password}
-            onChange={(e) => update('password', e.target.value)} required minLength={8} />
-          <p className="field__hint">At least 8 characters.</p>
+            onChange={(e) => update('password', e.target.value)} required minLength={10} maxLength={128} />
+          <p className="field__hint">At least 10 characters. A few random words make a strong password.</p>
         </div>
 
-        <button className="btn btn--primary btn--block" disabled={busy}>
+        {turnstileEnabled && <Turnstile key={turnstileKey} onToken={setTurnstileToken} />}
+
+        <button className="btn btn--primary btn--block" disabled={busy || (turnstileEnabled && !turnstileToken)}>
           {busy ? 'Creating account…' : 'Create account'}
         </button>
 

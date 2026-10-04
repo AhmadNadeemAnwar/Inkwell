@@ -77,7 +77,7 @@ export interface PostFilters {
 }
 
 export const api = {
-  register: (body: { email: string; handle: string; displayName: string; password: string }) =>
+  register: (body: { email: string; handle: string; displayName: string; password: string; turnstileToken?: string }) =>
     request<AuthResponse>('POST', '/api/v1/auth/register', body),
 
   login: (body: { email: string; password: string }) =>

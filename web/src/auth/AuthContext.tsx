@@ -8,7 +8,7 @@ interface AuthContextValue {
   /** True until the stored token has been checked, so guarded routes do not flash the login page. */
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (input: { email: string; handle: string; displayName: string; password: string }) => Promise<void>
+  register: (input: { email: string; handle: string; displayName: string; password: string; turnstileToken?: string }) => Promise<void>
   logout: () => void
   setUser: (user: CurrentUser) => void
 }
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserState(response.user)
   }, [])
 
-  const register = useCallback(async (input: { email: string; handle: string; displayName: string; password: string }) => {
+  const register = useCallback(async (input: { email: string; handle: string; displayName: string; password: string; turnstileToken?: string }) => {
     const response = await api.register(input)
     setToken(response.token)
     setUserState(response.user)

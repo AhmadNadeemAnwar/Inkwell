@@ -25,3 +25,24 @@ public interface ICurrentUser
     /// <summary>Returns the caller's id, or throws if the request is anonymous.</summary>
     Guid RequireUserId();
 }
+
+/// <summary>Checks a password against known breach corpora. Implementations must fail open (return false) on any error.</summary>
+public interface IPwnedPasswordChecker
+{
+    Task<bool> IsPwnedAsync(string password, CancellationToken ct = default);
+}
+
+/// <summary>Bot check for sign-up. When no secret is configured, <see cref="IsEnabled"/> is false and verification is skipped.</summary>
+public interface ITurnstileVerifier
+{
+    bool IsEnabled { get; }
+    Task<bool> VerifyAsync(string? token, CancellationToken ct = default);
+}
+
+/// <summary>Counts failed sign-ins per account, so a distributed attack cannot get around per-IP limits.</summary>
+public interface ILoginAttemptTracker
+{
+    bool IsLockedOut(string key);
+    void RecordFailure(string key);
+    void Clear(string key);
+}

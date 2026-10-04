@@ -9,6 +9,7 @@ import { RichText } from '../components/RichText'
 import { Avatar, EmptyState, ErrorNote, Spinner, TagPill, formatDate } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../auth/AuthContext'
+import { safeImageSrc } from '../lib/safeUrl'
 
 export function PostPage() {
   const { slug = '' } = useParams()
@@ -91,7 +92,9 @@ export function PostPage() {
           )}
         </div>
 
-        {local.coverImageUrl && <img className="article__cover" src={local.coverImageUrl} alt="" />}
+        {safeImageSrc(local.coverImageUrl) && (
+          <img className="article__cover" src={safeImageSrc(local.coverImageUrl)} alt="" referrerPolicy="no-referrer" />
+        )}
 
         <RichText contentJson={local.contentJson} />
 

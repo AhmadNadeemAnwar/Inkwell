@@ -1,6 +1,6 @@
 namespace Inkwell.Application.Auth.Dtos;
 
-public sealed record RegisterRequest(string Email, string Handle, string DisplayName, string Password);
+public sealed record RegisterRequest(string Email, string Handle, string DisplayName, string Password, string? TurnstileToken = null);
 
 public sealed record LoginRequest(string Email, string Password);
 

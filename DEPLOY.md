@@ -3,7 +3,7 @@
 ```
 Browser ──> inkwell.ahmadnadeem.dev      Cloudflare Workers (static React app)
                │
-               └──> inkwell-api.onrender.com   Render free web service (.NET API, Docker)
+               └──> <name>.onrender.com        Render free web service (.NET API, Docker)
                          │
                          └──> Neon free Postgres
 ```
@@ -45,7 +45,7 @@ Check `git status` before pushing: `*.db` files and `node_modules/` should not b
 
 1. Sign up at render.com with GitHub. **New + > Web Service**, pick the `inkwell` repo.
 2. Settings:
-   - **Name:** `inkwell-api` (this fixes the URL as `https://inkwell-api.onrender.com`)
+   - **Name:** `inkwell-api` (Render may append a suffix, e.g. `inkwell-zpbc`; use whatever URL it shows you)
    - **Language:** Docker (it finds `Dockerfile` at the repo root)
    - **Instance Type:** **Free**
    - **Health Check Path** (under Advanced): `/health`
@@ -65,7 +65,7 @@ Check `git status` before pushing: `*.db` files and `node_modules/` should not b
    Do **not** set `Seed__Enabled`. Seeding creates demo accounts with a published password, which
    must never exist on a public site.
 4. **Create Web Service.** The first build takes several minutes. When the log shows
-   `Now listening on`, open `https://inkwell-api.onrender.com/health`. It should say `Healthy`.
+   `Now listening on`, open `https://<your-service>.onrender.com/health`. It should say `Healthy`.
    The database tables are created automatically on first start.
 
 If Render gave the service a different URL (the name was taken), put that URL in

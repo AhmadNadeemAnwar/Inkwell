@@ -1,0 +1,28 @@
+## .NET
+bin/
+obj/
+out/
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.user
+
+## SQLite runtime databases (generated at run time)
+*.db
+*.db-shm
+*.db-wal
+
+## Tests
+TestResults/
+*.trx
+
+## Node / Vite
+node_modules/
+dist/
+*.local
+
+## OS
+.DS_Store
+Thumbs.db

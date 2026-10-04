@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "inkwell",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Any path that is not a real file serves index.html, so /p/some-slug works on refresh.
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    { "pattern": "inkwell.ahmadnadeem.dev", "custom_domain": true }
+  ]
+}

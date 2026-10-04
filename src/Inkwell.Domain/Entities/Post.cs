@@ -1,0 +1,137 @@
+using Inkwell.Domain.Common;
+using Inkwell.Domain.Enums;
+using Inkwell.Domain.Exceptions;
+
+namespace Inkwell.Domain.Entities;
+
+public class Post : BaseEntity
+{
+    public const int MaxTitleLength = 160;
+    public const int MaxSubtitleLength = 300;
+    private const int WordsReadPerMinute = 225;
+
+    public Guid AuthorId { get; private set; }
+    public User Author { get; private set; } = null!;
+
+    public string Title { get; private set; } = null!;
+    public string? Subtitle { get; private set; }
+
+    /// <summary>
+    /// Assigned once, at first publish, and never changed afterwards — editing a title must not
+    /// break inbound links or the canonical URL.
+    /// </summary>
+    public string? Slug { get; private set; }
+
+    public string? CoverImageUrl { get; private set; }
+
+    /// <summary>Editor document (ProseMirror/TipTap JSON). The source of truth for the post body.</summary>
+    public string ContentJson { get; private set; } = null!;
+
+    /// <summary>Server-derived flattening of <see cref="ContentJson"/>. Backs search, excerpts and reading time.</summary>
+    public string PlainText { get; private set; } = string.Empty;
+
+    public PostStatus Status { get; private set; } = PostStatus.Draft;
+    public DateTimeOffset? PublishedAt { get; private set; }
+    public int ReadingTimeMinutes { get; private set; } = 1;
+
+    public int ClapCount { get; private set; }
+    public int CommentCount { get; private set; }
+    public int ViewCount { get; private set; }
+
+    public ICollection<PostTag> PostTags { get; private set; } = new List<PostTag>();
+    public ICollection<Comment> Comments { get; private set; } = new List<Comment>();
+    public ICollection<PostRevision> Revisions { get; private set; } = new List<PostRevision>();
+
+    private Post() { }
+
+    public Post(Guid authorId, string title, string? subtitle, string contentJson, string plainText, string? coverImageUrl = null)
+    {
+        AuthorId = authorId;
+        ApplyContent(title, subtitle, contentJson, plainText, coverImageUrl);
+    }
+
+    public void UpdateDraft(string title, string? subtitle, string contentJson, string plainText, string? coverImageUrl)
+    {
+        ApplyContent(title, subtitle, contentJson, plainText, coverImageUrl);
+        Touch();
+    }
+
+    private void ApplyContent(string title, string? subtitle, string contentJson, string plainText, string? coverImageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(title)) throw new DomainException("Title is required.");
+        if (title.Trim().Length > MaxTitleLength) throw new DomainException($"Title cannot exceed {MaxTitleLength} characters.");
+        if (subtitle is { Length: > MaxSubtitleLength }) throw new DomainException($"Subtitle cannot exceed {MaxSubtitleLength} characters.");
+        if (string.IsNullOrWhiteSpace(contentJson)) throw new DomainException("Content is required.");
+
+        Title = title.Trim();
+        Subtitle = string.IsNullOrWhiteSpace(subtitle) ? null : subtitle.Trim();
+        ContentJson = contentJson;
+        PlainText = plainText ?? string.Empty;
+        CoverImageUrl = string.IsNullOrWhiteSpace(coverImageUrl) ? null : coverImageUrl.Trim();
+        ReadingTimeMinutes = CalculateReadingTime(PlainText);
+    }
+
+    /// <param name="slug">Unique slug resolved by the application layer; ignored if this post already has one.</param>
+    public void Publish(string slug)
+    {
+        if (Status == PostStatus.Published) throw new DomainException("Post is already published.");
+        if (string.IsNullOrWhiteSpace(PlainText)) throw new DomainException("Cannot publish an empty post.");
+
+        Slug ??= slug;
+        Status = PostStatus.Published;
+        PublishedAt ??= DateTimeOffset.UtcNow;
+        Touch();
+    }
+
+    public void Unpublish()
+    {
+        if (Status == PostStatus.Draft) throw new DomainException("Post is already a draft.");
+        Status = PostStatus.Draft;
+        Touch();
+    }
+
+    public void MakeUnlisted()
+    {
+        if (Slug is null) throw new DomainException("Publish the post at least once before unlisting it.");
+        Status = PostStatus.Unlisted;
+        Touch();
+    }
+
+    public bool IsVisibleTo(Guid? viewerId) =>
+        Status is PostStatus.Published or PostStatus.Unlisted || (viewerId.HasValue && viewerId.Value == AuthorId);
+
+    public void EnsureOwnedBy(Guid userId)
+    {
+        if (AuthorId != userId) throw new ForbiddenException("You can only modify your own posts.");
+    }
+
+    public void AddClaps(int amount)
+    {
+        if (amount <= 0) throw new DomainException("Clap amount must be positive.");
+        ClapCount += amount;
+    }
+
+    public void RemoveClaps(int amount) => ClapCount = Math.Max(0, ClapCount - amount);
+
+    public void IncrementCommentCount() => CommentCount++;
+    public void DecrementCommentCount() => CommentCount = Math.Max(0, CommentCount - 1);
+    public void RegisterView() => ViewCount++;
+
+    /// <summary>Excerpt used in feed cards and as the meta description.</summary>
+    public string BuildExcerpt(int maxLength = 200)
+    {
+        if (!string.IsNullOrWhiteSpace(Subtitle)) return Subtitle;
+        if (PlainText.Length <= maxLength) return PlainText;
+
+        var cut = PlainText[..maxLength];
+        var lastSpace = cut.LastIndexOf(' ');
+        return (lastSpace > 0 ? cut[..lastSpace] : cut) + "...";
+    }
+
+    private static int CalculateReadingTime(string plainText)
+    {
+        if (string.IsNullOrWhiteSpace(plainText)) return 1;
+        var words = plainText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        return Math.Max(1, (int)Math.Ceiling(words / (double)WordsReadPerMinute));
+    }
+}

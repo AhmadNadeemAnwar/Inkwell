@@ -38,6 +38,10 @@ public static class RateLimiting
         if (HttpMethods.IsPost(method) && path.Equals("/api/v1/auth/login", StringComparison.OrdinalIgnoreCase))
             return Fixed($"login:{ip}", permits: 10, TimeSpan.FromMinutes(1));
 
+        // Admin sign-in guards the most powerful account on the site, so it gets the tightest limit of all.
+        if (HttpMethods.IsPost(method) && path.Equals("/api/v1/admin/auth/login", StringComparison.OrdinalIgnoreCase))
+            return Fixed($"adminlogin:{ip}", permits: 5, TimeSpan.FromMinutes(1));
+
         // Accounts are cheap to mint and are the raw material for spam, so sign-ups get the tightest limit.
         if (HttpMethods.IsPost(method) && path.Equals("/api/v1/auth/register", StringComparison.OrdinalIgnoreCase))
             return Fixed($"register:{ip}", permits: 5, TimeSpan.FromHours(1));

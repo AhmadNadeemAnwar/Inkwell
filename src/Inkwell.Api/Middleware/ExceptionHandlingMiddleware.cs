@@ -41,6 +41,8 @@ public sealed class ExceptionHandlingMiddleware
             ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
             TooManyRequestsException => (StatusCodes.Status429TooManyRequests, "Too many requests"),
+            ServiceUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Not available"),
+            ExternalServiceException => (StatusCodes.Status502BadGateway, "Upstream service problem"),
             DomainException => (StatusCodes.Status400BadRequest, "Invalid request"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };

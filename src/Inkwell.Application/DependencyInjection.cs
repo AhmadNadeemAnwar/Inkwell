@@ -1,7 +1,9 @@
 using FluentValidation;
+using Inkwell.Application.Admin;
 using Inkwell.Application.Auth;
 using Inkwell.Application.Comments;
 using Inkwell.Application.Engagement;
+using Inkwell.Application.Portfolio;
 using Inkwell.Application.Posts;
 using Inkwell.Application.Tags;
 using Inkwell.Application.Users;
@@ -19,6 +21,9 @@ public static class DependencyInjection
         services.AddScoped<IEngagementService, EngagementService>();
         services.AddScoped<ITagService, TagService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IAdminAuthService, AdminAuthService>();
+        services.AddScoped<IPortfolioService, PortfolioService>();
 
         services.AddValidatorsFromAssemblyContaining<AuthService>();
 

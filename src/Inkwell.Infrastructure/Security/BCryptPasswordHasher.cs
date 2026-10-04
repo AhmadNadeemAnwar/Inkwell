@@ -12,6 +12,9 @@ public sealed class BCryptPasswordHasher : IPasswordHasher
 
     public string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password, WorkFactor);
 
+    /// <summary>Computed once, when the singleton is created, at the same work factor as real hashes.</summary>
+    public string DummyHash { get; } = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N"), WorkFactor);
+
     public bool Verify(string password, string hash)
     {
         try

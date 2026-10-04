@@ -22,6 +22,7 @@ public sealed class TestDatabase : IDisposable
     public UserRepository Users { get; }
     public EngagementRepository Engagement { get; }
     public CommentRepository Comments { get; }
+    public AdminRepository Admin { get; }
 
     public TestDatabase()
     {
@@ -40,6 +41,7 @@ public sealed class TestDatabase : IDisposable
         Users = new UserRepository(Db);
         Engagement = new EngagementRepository(Db);
         Comments = new CommentRepository(Db);
+        Admin = new AdminRepository(Db);
     }
 
     public async Task<User> AddUserAsync(string handle = "writer")
@@ -71,6 +73,7 @@ public sealed class FakePasswordHasher : IPasswordHasher
 {
     public string Hash(string password) => $"hashed:{password}";
     public bool Verify(string password, string hash) => hash == $"hashed:{password}";
+    public string DummyHash => "hashed:dummy-" + Guid.NewGuid().ToString("N");
 }
 
 public sealed class FakePwnedPasswordChecker : IPwnedPasswordChecker
@@ -95,7 +98,10 @@ public sealed class FakeTurnstileVerifier : ITurnstileVerifier
 /// <summary>A clock the test advances by hand.</summary>
 public sealed class ManualTimeProvider : TimeProvider
 {
-    private DateTimeOffset _now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+    private DateTimeOffset _now;
+
+    public ManualTimeProvider(DateTimeOffset? start = null) => _now = start ?? new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
     public override DateTimeOffset GetUtcNow() => _now;
     public void Advance(TimeSpan by) => _now += by;
 }

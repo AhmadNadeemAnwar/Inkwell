@@ -11,12 +11,23 @@ namespace Inkwell.Infrastructure.Security;
 public sealed class JwtTokenService : ITokenService
 {
     private readonly JwtOptions _options;
+    private readonly AdminOptions _admin;
 
-    public JwtTokenService(IOptions<JwtOptions> options) => _options = options.Value;
-
-    public AccessToken Create(User user)
+    public JwtTokenService(IOptions<JwtOptions> options, IOptions<AdminOptions> admin)
     {
-        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(_options.ExpiryMinutes);
+        _options = options.Value;
+        _admin = admin.Value;
+    }
+
+    public AccessToken Create(User user) =>
+        Build(user, TimeSpan.FromMinutes(_options.ExpiryMinutes), mfa: false);
+
+    public AccessToken CreateAdminSession(User user) =>
+        Build(user, TimeSpan.FromMinutes(Math.Clamp(_admin.SessionMinutes, 5, 720)), mfa: true);
+
+    private AccessToken Build(User user, TimeSpan lifetime, bool mfa)
+    {
+        var expiresAt = DateTimeOffset.UtcNow.Add(lifetime);
 
         var claims = new List<Claim>
         {
@@ -26,6 +37,9 @@ public sealed class JwtTokenService : ITokenService
             new("handle", user.Handle),
             new("displayName", user.DisplayName)
         };
+
+        // Only the admin sign-in path adds this, after a one-time code has been verified.
+        if (mfa) claims.Add(new Claim("mfa", "totp"));
 
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Key)),

@@ -9,6 +9,7 @@ using Inkwell.Infrastructure;
 using Inkwell.Infrastructure.Persistence;
 using Inkwell.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -69,7 +70,11 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationHandler, AdminAuthorizationHandler>();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(AdminRequirement.PolicyName, policy => policy
+        .RequireAuthenticatedUser()
+        .AddRequirements(new AdminRequirement()));
 
 // Per-client, per-endpoint-kind limits: tight on sign-in and sign-up, looser on reads.
 builder.Services.AddInkwellRateLimiting(builder.Configuration);

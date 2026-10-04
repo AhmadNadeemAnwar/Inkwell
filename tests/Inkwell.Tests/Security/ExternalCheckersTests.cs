@@ -106,12 +106,12 @@ public class TurnstileVerifierTests
         new(status) { Content = new StringContent(body) };
 
     [Fact]
-    public void It_is_disabled_without_a_secret_and_always_passes()
+    public async Task It_is_disabled_without_a_secret_and_always_passes()
     {
         var verifier = Verifier(new ThrowingHandler(), secret: "");
 
         verifier.IsEnabled.Should().BeFalse();
-        verifier.VerifyAsync(null).Result.Should().BeTrue();
+        (await verifier.VerifyAsync(null)).Should().BeTrue();
     }
 
     [Fact]

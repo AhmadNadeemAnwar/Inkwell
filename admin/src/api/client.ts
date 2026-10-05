@@ -93,8 +93,8 @@ const query = (params: Record<string, string | number | undefined | null>) => {
 }
 
 export const api = {
-  login: (email: string, password: string, code: string) =>
-    request<Session>('POST', '/api/v1/admin/auth/login', { email, password, code }, false),
+  login: (email: string, code: string) =>
+    request<Session>('POST', '/api/v1/admin/auth/login', { email, code }, false),
 
   me: () => request<{ email: string; displayName: string }>('GET', '/api/v1/admin/me'),
 

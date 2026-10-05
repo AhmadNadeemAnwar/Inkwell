@@ -113,7 +113,7 @@ public class AdminPipelineTests : IClassFixture<AdminApiFactory>
     {
         await _factory.EnsureUsersAsync();
         var response = await Send(HttpMethod.Post, "/api/v1/admin/auth/login",
-            body: new { email = AdminApiFactory.AdminEmail, password = AdminApiFactory.Password, code = _factory.FreshCode() });
+            body: new { email = AdminApiFactory.AdminEmail, code = _factory.FreshCode() });
         response.StatusCode.Should().Be(HttpStatusCode.OK, "valid admin credentials must sign in");
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("token").GetString()!;
     }
@@ -204,7 +204,7 @@ public class AdminPipelineTests : IClassFixture<AdminApiFactory>
     {
         await _factory.EnsureUsersAsync();
         var response = await Send(HttpMethod.Post, "/api/v1/admin/auth/login",
-            body: new { email = AdminApiFactory.AdminEmail, password = AdminApiFactory.Password, code = _factory.FreshCode() });
+            body: new { email = AdminApiFactory.AdminEmail, code = _factory.FreshCode() });
 
         var expires = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("expiresAt").GetDateTimeOffset();
 
@@ -217,23 +217,23 @@ public class AdminPipelineTests : IClassFixture<AdminApiFactory>
         await _factory.EnsureUsersAsync();
 
         var response = await Send(HttpMethod.Post, "/api/v1/admin/auth/login",
-            body: new { email = AdminApiFactory.AdminEmail, password = AdminApiFactory.Password, code = "000000" });
+            body: new { email = AdminApiFactory.AdminEmail, code = "000000" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("Invalid email, password or code");
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Invalid email or code");
     }
 
     [Fact]
-    public async Task A_wrong_password_with_a_valid_code_gets_the_identical_response()
+    public async Task An_unknown_email_with_a_valid_code_gets_the_identical_response()
     {
         await _factory.EnsureUsersAsync();
-        var wrongPassword = await Send(HttpMethod.Post, "/api/v1/admin/auth/login",
-            body: new { email = AdminApiFactory.AdminEmail, password = "definitely wrong", code = _factory.FreshCode() });
+        var wrongEmail = await Send(HttpMethod.Post, "/api/v1/admin/auth/login",
+            body: new { email = "nobody@example.com", code = _factory.FreshCode() });
         var wrongCode = await Send(HttpMethod.Post, "/api/v1/admin/auth/login",
-            body: new { email = AdminApiFactory.AdminEmail, password = AdminApiFactory.Password, code = "000000" });
+            body: new { email = AdminApiFactory.AdminEmail, code = "000000" });
 
-        wrongPassword.StatusCode.Should().Be(wrongCode.StatusCode);
-        (await wrongPassword.Content.ReadAsStringAsync()).Should().Be(await wrongCode.Content.ReadAsStringAsync());
+        wrongEmail.StatusCode.Should().Be(wrongCode.StatusCode);
+        (await wrongEmail.Content.ReadAsStringAsync()).Should().Be(await wrongCode.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public class AdminPipelineTests : IClassFixture<AdminApiFactory>
     {
         await _factory.EnsureUsersAsync();
         var code = _factory.FreshCode();
-        var body = new { email = AdminApiFactory.AdminEmail, password = AdminApiFactory.Password, code };
+        var body = new { email = AdminApiFactory.AdminEmail, code };
 
         (await Send(HttpMethod.Post, "/api/v1/admin/auth/login", body: body)).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Send(HttpMethod.Post, "/api/v1/admin/auth/login", body: body)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -251,7 +251,7 @@ public class AdminPipelineTests : IClassFixture<AdminApiFactory>
     public async Task A_malformed_code_is_rejected_before_any_check_runs()
     {
         var response = await Send(HttpMethod.Post, "/api/v1/admin/auth/login",
-            body: new { email = AdminApiFactory.AdminEmail, password = AdminApiFactory.Password, code = "12ab56" });
+            body: new { email = AdminApiFactory.AdminEmail, code = "12ab56" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("6 digits");
@@ -262,7 +262,7 @@ public class AdminPipelineTests : IClassFixture<AdminApiFactory>
     {
         var ip = NewIp();
         var attempt = () => Send(HttpMethod.Post, "/api/v1/admin/auth/login", ip: ip,
-            body: new { email = $"x{Guid.NewGuid():N}@example.com", password = "whatever", code = "000000" });
+            body: new { email = $"x{Guid.NewGuid():N}@example.com", code = "000000" });
 
         for (var i = 0; i < 5; i++) (await attempt()).StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
@@ -402,7 +402,7 @@ public class AdminPortfolioHttpTests : IClassFixture<AdminApiFactory>
     {
         await _factory.EnsureUsersAsync();
         var response = await Send(HttpMethod.Post, "/api/v1/admin/auth/login", null,
-            new { email = AdminApiFactory.AdminEmail, password = AdminApiFactory.Password, code = _factory.FreshCode() });
+            new { email = AdminApiFactory.AdminEmail, code = _factory.FreshCode() });
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("token").GetString()!;
     }
 

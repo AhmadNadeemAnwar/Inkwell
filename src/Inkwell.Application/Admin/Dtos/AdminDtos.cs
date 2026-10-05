@@ -1,6 +1,6 @@
 namespace Inkwell.Application.Admin.Dtos;
 
-public sealed record AdminLoginRequest(string Email, string Password, string Code);
+public sealed record AdminLoginRequest(string Email, string Code);
 
 public sealed record AdminSessionDto(string Token, DateTimeOffset ExpiresAt, string Email, string DisplayName);
 

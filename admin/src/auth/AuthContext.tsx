@@ -7,7 +7,7 @@ interface AuthContextValue {
   session: Session | null
   /** True until a stored session has been confirmed with the server, so the sign-in page does not flash. */
   checking: boolean
-  login: (email: string, password: string, code: string) => Promise<void>
+  login: (email: string, code: string) => Promise<void>
   logout: () => void
 }
 
@@ -44,8 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer)
   }, [session, logout])
 
-  const login = useCallback(async (email: string, password: string, code: string) => {
-    const next = await api.login(email, password, code)
+  const login = useCallback(async (email: string, code: string) => {
+    const next = await api.login(email, code)
     saveSession(next)
     setSession(next)
   }, [])

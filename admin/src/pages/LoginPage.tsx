@@ -8,7 +8,6 @@ export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -18,7 +17,7 @@ export function LoginPage() {
     setBusy(true)
     setError(null)
     try {
-      await login(email, password, code.replace(/\s/g, ''))
+      await login(email, code.replace(/\s/g, ''))
       navigate('/', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign you in.')
@@ -33,18 +32,13 @@ export function LoginPage() {
     <main className="login">
       <form className="login__card" onSubmit={submit}>
         <h1>Inkwell Admin</h1>
-        <p className="muted">Sign in with your password and the 6-digit code from your authenticator app.</p>
+        <p className="muted">Sign in with your email and the 6-digit code from your authenticator app.</p>
 
         {error && <ErrorNote message={error} />}
 
         <div className="field">
           <label htmlFor="email">Email</label>
           <input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
-        </div>
-
-        <div className="field">
-          <label htmlFor="password">Password</label>
-          <input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
 
         <div className="field">

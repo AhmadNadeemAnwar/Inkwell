@@ -10,8 +10,8 @@ A private site at **https://admin.ahmadnadeem.dev** for running Inkwell and edit
 | Topics | **Rename**, **merge** and **delete** tags |
 | Portfolio | Create, edit and delete your site's **blog**, **projects** and **updates** (Markdown, with a live preview) |
 
-Sign-up stays closed. Only your own account can sign in, and it needs your password **and** a code
-from an authenticator app.
+Sign-up stays closed. Only your own account can sign in, with your email and a code from an
+authenticator app. There is no password on this site: your phone is the key, so keep it locked.
 
 ```
  admin.ahmadnadeem.dev  ──>  Render API (Inkwell)  ──>  GitHub (private portfolio repo)
@@ -122,7 +122,7 @@ npx.cmd wrangler deploy
 ```
 
 `wrangler deploy` creates `admin.ahmadnadeem.dev` and its DNS record. Open it and sign in with your
-email, password and the current 6-digit code.
+email and the current 6-digit code.
 
 > If your API URL isn't `https://inkwell-zpbc.onrender.com`, change it in **both**
 > `admin/.env.production` and `admin/public/_headers` before building.
@@ -152,15 +152,19 @@ Admin actions are recorded in the API's logs (Render → Logs) with your email a
 
 ## How it is protected
 
-- **Two factors, and the second can't be guessed or replayed.** The admin token comes only from
-  `/api/v1/admin/auth/login`, which needs the password and a current code. Ordinary sign-in tokens
-  never work on admin routes, even with the right password. A code works once.
+- **One factor: the authenticator code.** The admin token comes only from
+  `/api/v1/admin/auth/login`, which needs an email on the admin list and a current code. Ordinary
+  sign-in tokens never work on admin routes, even with the right password. A code works once.
+  This is a deliberate trade of some safety for convenience: whoever holds your unlocked phone can
+  get in, and a code is only 6 digits, which is why wrong guesses are limited so tightly (below).
 - **Revocable instantly.** The admin list is checked on every request, so removing your email from
   `Admin__Emails__0` locks that account out at once.
 - **Short sessions.** An admin session lasts 2 hours and lives in the browser tab only; closing the
   tab signs you out.
-- **Throttled.** 5 sign-in attempts per minute per visitor, and an account locks after 10 failures
-  in 15 minutes. Every failure gets the same message, so it never reveals which part was wrong.
+- **Throttled.** 5 sign-in attempts per minute per visitor, and the account locks for an hour after
+  5 wrong codes, wherever they came from. That holds a determined guesser to about 120 tries a day
+  out of a million possible codes. Every failure gets the same message, so it never reveals which
+  part was wrong. The cost: someone who knows your email can keep you locked out by guessing.
 - **Locked-down site.** The admin site sends a strict content policy, can't be framed, and is hidden
   from search engines.
 - **Narrow GitHub access.** The token reaches one repository with one permission, only
@@ -171,8 +175,8 @@ Admin actions are recorded in the API's logs (Render → Logs) with your email a
 
 | You see | Likely cause |
 |---|---|
-| "Invalid email, password or code" | One of the three is wrong. Check the email is on `Admin__Emails__0`, wait for a *new* code (each works once), and check your phone's clock is set automatically. |
-| "Too many failed attempts" | Wait 15 minutes, or fix `Admin__TotpSecret` if the app and server disagree. |
+| "Invalid email or code" | One of the two is wrong. Check the email is on `Admin__Emails__0`, wait for a *new* code (each works once), and check your phone's clock is set automatically. |
+| "Too many failed attempts" | Wait an hour, or fix `Admin__TotpSecret` if the app and server disagree. |
 | Sign-in works but pages say you're signed out | The email isn't on the admin list any more, or the session ended (2 hours). Sign in again. |
 | Portfolio shows setup instructions | `Portfolio__Repo` or `Portfolio__Token` is missing on Render. |
 | "GitHub rejected the token" | It expired or was revoked. Create a new one and update Render. |

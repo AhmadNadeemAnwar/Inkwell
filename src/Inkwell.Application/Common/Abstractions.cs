@@ -56,6 +56,12 @@ public interface ILoginAttemptTracker
     void Clear(string key);
 }
 
+/// <summary>
+/// The counter for admin sign-in. Kept separate because that sign-in rests on a 6-digit code alone,
+/// so it allows far fewer wrong guesses than a password does.
+/// </summary>
+public interface IAdminLoginAttemptTracker : ILoginAttemptTracker;
+
 /// <summary>Decides who counts as an administrator. Re-evaluated on every request, so removing someone takes effect at once.</summary>
 public interface IAdminDirectory
 {

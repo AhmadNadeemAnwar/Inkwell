@@ -18,8 +18,17 @@ public sealed class InMemoryLoginAttemptTracker : ILoginAttemptTracker
 
     private readonly ConcurrentDictionary<string, Queue<DateTimeOffset>> _failures = new();
     private readonly TimeProvider _time;
+    private readonly int _maxFailures;
+    private readonly TimeSpan _window;
 
-    public InMemoryLoginAttemptTracker(TimeProvider? time = null) => _time = time ?? TimeProvider.System;
+    public InMemoryLoginAttemptTracker(TimeProvider? time = null) : this(time, MaxFailures, Window) { }
+
+    public InMemoryLoginAttemptTracker(TimeProvider? time, int maxFailures, TimeSpan window)
+    {
+        _time = time ?? TimeProvider.System;
+        _maxFailures = maxFailures;
+        _window = window;
+    }
 
     public bool IsLockedOut(string key)
     {
@@ -28,7 +37,7 @@ public sealed class InMemoryLoginAttemptTracker : ILoginAttemptTracker
         lock (queue)
         {
             Prune(queue);
-            return queue.Count >= MaxFailures;
+            return queue.Count >= _maxFailures;
         }
     }
 
@@ -49,7 +58,7 @@ public sealed class InMemoryLoginAttemptTracker : ILoginAttemptTracker
 
     private void Prune(Queue<DateTimeOffset> queue)
     {
-        var cutoff = _time.GetUtcNow() - Window;
+        var cutoff = _time.GetUtcNow() - _window;
         while (queue.Count > 0 && queue.Peek() < cutoff) queue.Dequeue();
     }
 
@@ -64,4 +73,23 @@ public sealed class InMemoryLoginAttemptTracker : ILoginAttemptTracker
             }
         }
     }
+}
+
+/// <summary>
+/// Admin sign-in is an email plus a 6-digit code, and a code can be guessed where a password cannot.
+/// Five wrong codes lock the account for the rest of an hour, which holds a determined guesser to
+/// about 120 tries a day against a million possibilities.
+/// </summary>
+public sealed class AdminLoginAttemptTracker : IAdminLoginAttemptTracker
+{
+    public const int MaxFailures = 5;
+    public static readonly TimeSpan Window = TimeSpan.FromHours(1);
+
+    private readonly InMemoryLoginAttemptTracker _inner;
+
+    public AdminLoginAttemptTracker(TimeProvider? time = null) => _inner = new InMemoryLoginAttemptTracker(time, MaxFailures, Window);
+
+    public bool IsLockedOut(string key) => _inner.IsLockedOut(key);
+    public void RecordFailure(string key) => _inner.RecordFailure(key);
+    public void Clear(string key) => _inner.Clear(key);
 }

@@ -172,7 +172,7 @@ public class ConfiguredAdminDirectoryTests
 public class AdminAuthServiceTests : IDisposable
 {
     private const string Email = "owner@example.com";
-    private const string Password = "correct horse battery staple";
+    private const string Password = "a password that admin sign-in never asks for";
 
     private readonly TestDatabase _fixture = new();
     private readonly string _secret = TotpTestSecret.NewSecret();
@@ -189,11 +189,10 @@ public class AdminAuthServiceTests : IDisposable
 
         _service = new AdminAuthService(
             _fixture.Users,
-            new FakePasswordHasher(),
             _tokens.Object,
             new ConfiguredAdminDirectory(_options),
             new TotpVerifier(_options, _clock),
-            new InMemoryLoginAttemptTracker(_clock),
+            new AdminLoginAttemptTracker(_clock),
             NullLogger<AdminAuthService>.Instance);
 
         _fixture.Db.Users.Add(new User(Email, "the-owner", "The Owner", new FakePasswordHasher().Hash(Password)));
@@ -203,11 +202,11 @@ public class AdminAuthServiceTests : IDisposable
 
     private string Code(int secondsFromNow = 0) => TotpTestSecret.CodeFor(_secret, _clock.GetUtcNow().AddSeconds(secondsFromNow));
 
-    private AdminLoginRequest Login(string email = Email, string password = Password, string? code = null) =>
-        new(email, password, code ?? Code());
+    private AdminLoginRequest Login(string email = Email, string? code = null) =>
+        new(email, code ?? Code());
 
     [Fact]
-    public async Task The_right_password_email_and_code_open_an_admin_session()
+    public async Task The_right_email_and_code_open_an_admin_session()
     {
         var session = await _service.LoginAsync(Login());
 
@@ -224,7 +223,6 @@ public class AdminAuthServiceTests : IDisposable
 
     public static IEnumerable<object[]> BadCredentials() =>
     [
-        ["wrong password"],
         ["wrong code"],
         ["not an admin"],
         ["unknown email"],
@@ -232,11 +230,10 @@ public class AdminAuthServiceTests : IDisposable
 
     [Theory]
     [MemberData(nameof(BadCredentials))]
-    public async Task Any_single_wrong_factor_fails_with_the_same_message(string what)
+    public async Task Any_wrong_detail_fails_with_the_same_message(string what)
     {
         var request = what switch
         {
-            "wrong password" => Login(password: "not the password"),
             "wrong code" => Login(code: "000000"),
             "not an admin" => Login(email: "reader@example.com"),
             _ => Login(email: "nobody@example.com"),
@@ -245,14 +242,14 @@ public class AdminAuthServiceTests : IDisposable
         var failure = await Record.ExceptionAsync(() => _service.LoginAsync(request));
 
         failure.Should().BeOfType<DomainException>();
-        failure!.Message.Should().Be("Invalid email, password or code.", "the message must not reveal which factor was wrong");
+        failure!.Message.Should().Be("Invalid email or code.", "the message must not reveal which part was wrong");
         _tokens.Verify(t => t.CreateAdminSession(It.IsAny<User>()), Times.Never);
     }
 
     [Fact]
-    public async Task A_correct_password_and_code_for_an_account_that_is_not_an_admin_is_refused()
+    public async Task A_valid_code_for_an_account_that_is_not_an_admin_is_refused()
     {
-        // The account exists, the password is right and the code is valid, but the email is not on the list.
+        // The account exists and the code is valid, but the email is not on the list.
         var failure = await Record.ExceptionAsync(() => _service.LoginAsync(Login(email: "reader@example.com")));
 
         failure.Should().BeOfType<DomainException>();
@@ -270,19 +267,45 @@ public class AdminAuthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task A_mistyped_password_does_not_burn_the_code()
+    public async Task A_mistyped_email_does_not_burn_the_code()
     {
         var code = Code();
-        await Record.ExceptionAsync(() => _service.LoginAsync(Login(password: "typo", code: code)));
+        await Record.ExceptionAsync(() => _service.LoginAsync(Login(email: "ownr@example.com", code: code)));
 
-        // Same 30-second window, correct password this time: it must still work.
+        // Same 30-second window, correct email this time: it must still work.
         (await _service.LoginAsync(Login(code: code))).Token.Should().Be("admin-session-token");
+    }
+
+    [Fact]
+    public void A_password_is_not_part_of_admin_sign_in()
+    {
+        typeof(AdminLoginRequest).GetProperties().Select(p => p.Name).Should().BeEquivalentTo(["Email", "Code"]);
+    }
+
+    [Fact]
+    public async Task Four_wrong_codes_still_leave_room_for_the_right_one()
+    {
+        for (var i = 0; i < AdminLoginAttemptTracker.MaxFailures - 1; i++)
+            await Record.ExceptionAsync(() => _service.LoginAsync(Login(code: "000000")));
+
+        (await _service.LoginAsync(Login())).Token.Should().Be("admin-session-token");
+    }
+
+    [Fact]
+    public async Task The_lock_is_still_in_place_after_the_ordinary_fifteen_minutes()
+    {
+        for (var i = 0; i < AdminLoginAttemptTracker.MaxFailures; i++)
+            await Record.ExceptionAsync(() => _service.LoginAsync(Login(code: "000000")));
+
+        _clock.Advance(InMemoryLoginAttemptTracker.Window + TimeSpan.FromMinutes(1));
+
+        (await Record.ExceptionAsync(() => _service.LoginAsync(Login()))).Should().BeOfType<TooManyRequestsException>();
     }
 
     [Fact]
     public async Task Repeated_failures_lock_the_account_even_against_the_right_credentials()
     {
-        for (var i = 0; i < InMemoryLoginAttemptTracker.MaxFailures; i++)
+        for (var i = 0; i < AdminLoginAttemptTracker.MaxFailures; i++)
             await Record.ExceptionAsync(() => _service.LoginAsync(Login(code: "000000")));
 
         var locked = await Record.ExceptionAsync(() => _service.LoginAsync(Login()));
@@ -293,10 +316,10 @@ public class AdminAuthServiceTests : IDisposable
     [Fact]
     public async Task The_lock_lifts_once_the_window_has_passed()
     {
-        for (var i = 0; i < InMemoryLoginAttemptTracker.MaxFailures; i++)
+        for (var i = 0; i < AdminLoginAttemptTracker.MaxFailures; i++)
             await Record.ExceptionAsync(() => _service.LoginAsync(Login(code: "000000")));
 
-        _clock.Advance(InMemoryLoginAttemptTracker.Window + TimeSpan.FromMinutes(1));
+        _clock.Advance(AdminLoginAttemptTracker.Window + TimeSpan.FromMinutes(1));
 
         (await _service.LoginAsync(Login())).Token.Should().Be("admin-session-token");
     }
@@ -309,7 +332,7 @@ public class AdminAuthServiceTests : IDisposable
         var failure = await Record.ExceptionAsync(() => _service.LoginAsync(Login()));
 
         failure.Should().BeOfType<DomainException>();
-        failure!.Message.Should().Be("Invalid email, password or code.");
+        failure!.Message.Should().Be("Invalid email or code.");
     }
 
     [Fact]

@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddSingleton<ITokenService, JwtTokenService>();
 
         services.AddSingleton<ILoginAttemptTracker, InMemoryLoginAttemptTracker>();
+        services.AddSingleton<IAdminLoginAttemptTracker, AdminLoginAttemptTracker>();
 
         services.Configure<PortfolioOptions>(configuration.GetSection(PortfolioOptions.SectionName));
         services.AddHttpClient<IPortfolioContentStore, GitHubPortfolioContentStore>();

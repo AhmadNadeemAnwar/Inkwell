@@ -42,7 +42,7 @@ dotnet test inkwell/tests/Inkwell.Tests
 
 `admin/` is a separate private site (deployed to `admin.ahmadnadeem.dev`) for moderating posts, comments
 and topics, viewing stats, and editing the portfolio's blog, projects and updates. It signs in with a
-password plus an authenticator-app code. Setup, usage and the security model are in [ADMIN.md](ADMIN.md).
+an authenticator-app code (no password). Setup, usage and the security model are in [ADMIN.md](ADMIN.md).
 
 ## Architecture
 

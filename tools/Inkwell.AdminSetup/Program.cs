@@ -23,6 +23,59 @@ if (args.Contains("--check"))
     return ok ? 0 : 1;
 }
 
+if (args.Contains("--reset-password"))
+{
+    // Lost-password recovery. Inkwell sends no email, so the new password is hashed here and the
+    // hash is put into the database by hand. The password itself never leaves this machine.
+    //
+    //   dotnet run --project tools/Inkwell.AdminSetup -- --reset-password you@example.com
+    var account = args.FirstOrDefault(a => !a.StartsWith("--"))?.Trim().ToLowerInvariant();
+    if (string.IsNullOrWhiteSpace(account) || !account.Contains('@'))
+    {
+        Console.WriteLine("Usage: dotnet run --project tools/Inkwell.AdminSetup -- --reset-password you@example.com");
+        return 2;
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("Choose a new password: 10 or more characters, and not built from your email address.");
+    Console.WriteLine("Nothing shows while you type.");
+
+    string? password = null;
+    for (var attempt = 1; attempt <= 5 && password is null; attempt++)
+    {
+        var first = ReadHidden("New password: ");
+        var problem =
+            first.Length < 10 ? "That is shorter than 10 characters." :
+            first.Length > 128 ? "That is longer than 128 characters." :
+            first.Distinct().Count() < 4 ? "That needs more variety." :
+            first.Contains(account.Split('@')[0], StringComparison.OrdinalIgnoreCase) ? "Don't include your email address in it." :
+            null;
+        if (problem is not null) { Console.WriteLine(problem); continue; }
+
+        if (ReadHidden("Type it again: ") != first) { Console.WriteLine("Those did not match."); continue; }
+        password = first;
+    }
+
+    if (password is null)
+    {
+        Console.WriteLine("Stopping. Nothing has been changed.");
+        return 1;
+    }
+
+    // Same algorithm and work factor as BCryptPasswordHasher in the API.
+    var hash = BCrypt.Net.BCrypt.HashPassword(password, 12);
+
+    Console.WriteLine();
+    Console.WriteLine("Now put it in the database. On neon.tech open your project, then SQL Editor,");
+    Console.WriteLine("paste this one line and press Run. It should report that 1 row was updated:");
+    Console.WriteLine();
+    Console.WriteLine($"UPDATE users SET \"PasswordHash\" = '{hash}' WHERE \"Email\" = '{account.Replace("'", "''")}';");
+    Console.WriteLine();
+    Console.WriteLine("If it says 0 rows, the email is not the one the account was registered with.");
+    Console.WriteLine("The line above holds a hash, not your password, but still don't share it.");
+    return 0;
+}
+
 var email = args.FirstOrDefault(a => !a.StartsWith("--"))?.Trim();
 if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
 {
@@ -94,4 +147,21 @@ try
 finally
 {
     try { File.Delete(qrPath); } catch { /* temp file; harmless if it lingers */ }
+}
+
+static string ReadHidden(string prompt)
+{
+    Console.Write(prompt);
+    if (Console.IsInputRedirected) return Console.ReadLine() ?? "";
+
+    var typed = new System.Text.StringBuilder();
+    while (true)
+    {
+        var key = Console.ReadKey(intercept: true);
+        if (key.Key == ConsoleKey.Enter) break;
+        if (key.Key == ConsoleKey.Backspace) { if (typed.Length > 0) typed.Length--; }
+        else if (!char.IsControl(key.KeyChar)) typed.Append(key.KeyChar);
+    }
+    Console.WriteLine();
+    return typed.ToString();
 }

@@ -13,7 +13,7 @@ public class AdminAuthController : ControllerBase
 
     public AdminAuthController(IAdminAuthService auth) => _auth = auth;
 
-    /// <summary>Password plus a current authenticator code. The only way to obtain a token the admin routes accept.</summary>
+    /// <summary>An admin email plus a current authenticator code. The only way to obtain a token the admin routes accept.</summary>
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AdminSessionDto), StatusCodes.Status200OK)]

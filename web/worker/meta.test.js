@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { absoluteImage, buildRss, buildSitemap, describePost, escapeText, headTags, plainText, slugFromPath, summarise } from './meta.js'
+import {
+  FETCHER_TIMEOUT_MS, READER_TIMEOUT_MS, absoluteImage, buildRss, buildSitemap, describePost, escapeText, headTags, plainText,
+  slugFromPath, summarise, timeoutFor,
+} from './meta.js'
 
 const SITE = { siteName: 'Inkwell', siteOrigin: 'https://inkwell.example', apiBase: 'https://api.example', description: 'Articles on Inkwell.' }
 const IMAGE = '/api/v1/images/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11'
@@ -16,6 +19,29 @@ const post = (overrides = {}) => ({
   tags: [{ name: 'Engineering' }],
   contentJson: JSON.stringify({ type: 'sections', content: [{ type: 'textSection', content: [paragraph('First paragraph.'), paragraph('Second paragraph.')] }] }),
   ...overrides,
+})
+
+describe('timeoutFor', () => {
+  it.each([
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    '',
+    null,
+  ])('does not keep a reader waiting: %s', (userAgent) => {
+    expect(timeoutFor(userAgent)).toBe(READER_TIMEOUT_MS)
+  })
+
+  it.each([
+    'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)',
+    'WhatsApp/2.23.20.0',
+    'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+    'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
+    'Twitterbot/1.0',
+    'TelegramBot (like TwitterBot)',
+    'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+  ])('gives a preview fetcher time for the API to wake: %s', (userAgent) => {
+    expect(timeoutFor(userAgent)).toBe(FETCHER_TIMEOUT_MS)
+  })
 })
 
 describe('escapeText', () => {

@@ -13,13 +13,13 @@
 //
 // Free plan allowance: 100,000 runs a day. One run per post page opened, plus feed and sitemap fetches.
 
-import { buildRss, buildSitemap, describePost, headTags, slugFromPath } from './meta.js'
+import { buildRss, buildSitemap, describePost, headTags, slugFromPath, timeoutFor } from './meta.js'
 
-/** The API sleeps when idle and can take a long time to wake. A preview is not worth holding a reader up for. */
-const POST_TIMEOUT_MS = 2500
 const LIST_TIMEOUT_MS = 20000
 
-const POST_CACHE_SECONDS = 300
+// Long enough that a post someone has already opened keeps its preview while the API sleeps. The
+// cost is that an edited title or subtitle can take this long to reach new previews.
+const POST_CACHE_SECONDS = 6 * 60 * 60
 const LIST_CACHE_SECONDS = 600
 const MAX_LISTED_POSTS = 500
 const RSS_ITEMS = 30
@@ -100,14 +100,14 @@ async function cachedDocument(request, ctx, contentType, build) {
 }
 
 /** The post as the API returns it, remembered briefly so a burst of previews is one API call, not many. */
-async function cachedPost(ctx, site, slug) {
+async function cachedPost(ctx, site, slug, timeoutMs) {
   const cache = caches.default
   const key = new Request(`https://post-meta.internal/${encodeURIComponent(slug)}`)
 
   const hit = await cache.match(key)
   if (hit) return hit.json()
 
-  const post = await getJson(`${site.apiBase}/api/v1/posts/${encodeURIComponent(slug)}`, POST_TIMEOUT_MS)
+  const post = await getJson(`${site.apiBase}/api/v1/posts/${encodeURIComponent(slug)}`, timeoutMs)
   if (post) {
     // Only what the preview needs is kept; the body is reduced to its description first.
     const meta = describePost(post, site)
@@ -122,7 +122,7 @@ async function cachedPost(ctx, site, slug) {
 async function postPage(request, env, ctx, site, slug) {
   // Started together: the page is needed either way, and the preview must not delay it.
   const pagePromise = env.ASSETS.fetch(request)
-  const meta = await cachedPost(ctx, site, slug).catch((error) => {
+  const meta = await cachedPost(ctx, site, slug, timeoutFor(request.headers.get('User-Agent'))).catch((error) => {
     console.log('post lookup failed', slug, String(error))
     return null
   })

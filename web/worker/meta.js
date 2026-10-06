@@ -6,6 +6,23 @@ const SLUG = /^[a-z0-9][a-z0-9-]{0,119}$/
 
 export const DESCRIPTION_LENGTH = 200
 
+/** A person is waiting for the page, so the preview gets only a moment before the page is sent without it. */
+export const READER_TIMEOUT_MS = 2500
+
+/** Nobody is waiting on a preview fetcher or crawler, and the preview is the whole reason it came. */
+export const FETCHER_TIMEOUT_MS = 20000
+
+const FETCHERS = /bot|crawl|spider|preview|facebookexternalhit|whatsapp|telegram|discord|slack|embedly|skype|pinterest|vkshare|redditbot|twitter|linkedin/i
+
+/**
+ * How long to wait for the API before sending a post page without its preview. The API sleeps when
+ * idle and can take a while to wake, so services that fetch a link to build a preview card are
+ * given much longer than a reader would tolerate.
+ */
+export function timeoutFor(userAgent) {
+  return FETCHERS.test(String(userAgent ?? '')) ? FETCHER_TIMEOUT_MS : READER_TIMEOUT_MS
+}
+
 /** Text placed inside HTML or XML, whether between tags or inside a quoted attribute. */
 export function escapeText(value) {
   return String(value ?? '')

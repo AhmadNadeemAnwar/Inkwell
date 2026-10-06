@@ -61,7 +61,8 @@ export function plainText(contentJson) {
   const walk = (node) => {
     if (!node || typeof node !== 'object') return
     if (typeof node.text === 'string') parts.push(node.text)
-    if (node.type === 'imageSection' && typeof node.attrs?.caption === 'string') parts.push(node.attrs.caption)
+    // A caption is its own sentence: without the space it would run into the paragraph after it.
+    if (node.type === 'imageSection' && typeof node.attrs?.caption === 'string') parts.push(node.attrs.caption, ' ')
     if (Array.isArray(node.content)) {
       node.content.forEach(walk)
       // Blocks are separate sentences, not one run-on word.

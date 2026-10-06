@@ -79,6 +79,15 @@ describe('plainText', () => {
     expect(plainText(JSON.stringify({ type: 'sections', content: [{ type: 'imageSection', attrs: { imageId: 'x', caption: 'A caption' } }] }))).toBe('A caption')
   })
 
+  it('keeps a picture caption apart from the paragraph after it', () => {
+    const body = JSON.stringify({ type: 'sections', content: [
+      { type: 'imageSection', attrs: { imageId: 'x', caption: 'AI generated photo' } },
+      { type: 'textSection', content: [paragraph('We keep asking.')] },
+    ] })
+
+    expect(plainText(body)).toBe('AI generated photo We keep asking.')
+  })
+
   it('returns nothing for a body it cannot read', () => {
     expect(plainText('not json')).toBe('')
     expect(plainText('null')).toBe('')

@@ -32,7 +32,12 @@ public class ApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Production");
-        if (SignUpOverride is { } open) builder.UseSetting("Accounts:AllowPublicSignUp", open.ToString());
+        if (SignUpOverride is { } open)
+        {
+            builder.UseSetting("Accounts:AllowPublicSignUp", open.ToString());
+            // Most tests sign in with a password to get a token; the shipped site has that switched off too.
+            builder.UseSetting("Accounts:AllowPasswordSignIn", open.ToString());
+        }
         builder.UseSetting("Jwt:Key", new string('k', 48));
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={_dbPath}");
         builder.UseSetting("Security:CheckPwnedPasswords", "false");
@@ -346,8 +351,9 @@ public class ClosedSignUpTests : IClassFixture<ClosedApiFactory>
 
         var response = await _client.SendAsync(request);
 
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement
-            .GetProperty("allowPublicSignUp").GetBoolean().Should().BeFalse();
+        var options = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        options.GetProperty("allowPublicSignUp").GetBoolean().Should().BeFalse();
+        options.GetProperty("allowPasswordSignIn").GetBoolean().Should().BeFalse();
     }
 
     [Fact]
@@ -359,12 +365,13 @@ public class ClosedSignUpTests : IClassFixture<ClosedApiFactory>
         (await response.Content.ReadAsStringAsync()).Should().Contain("Sign-ups are closed");
 
         // And nothing was created behind the refusal.
-        var login = await Post("/api/v1/auth/login", new { email = "sneaky-visitor@example.com", password = "correct horse battery staple" });
-        login.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var scope = _factory.Services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<Inkwell.Domain.Interfaces.IUserRepository>();
+        (await users.GetByEmailAsync("sneaky-visitor@example.com")).Should().BeNull();
     }
 
     [Fact]
-    public async Task An_existing_account_can_still_sign_in_and_use_its_token()
+    public async Task Password_sign_in_is_closed_even_for_a_real_account_with_the_right_password()
     {
         using (var scope = _factory.Services.CreateScope())
         {
@@ -372,15 +379,17 @@ public class ClosedSignUpTests : IClassFixture<ClosedApiFactory>
                 new RegisterRequest("owner@example.com", "the-owner", "The Owner", "correct horse battery staple"));
         }
 
-        var login = await Post("/api/v1/auth/login", new { email = "owner@example.com", password = "correct horse battery staple" });
-        login.StatusCode.Should().Be(HttpStatusCode.OK);
-        var token = JsonDocument.Parse(await login.Content.ReadAsStringAsync()).RootElement.GetProperty("token").GetString();
+        var right = await Post("/api/v1/auth/login", new { email = "owner@example.com", password = "correct horse battery staple" });
+        var wrong = await Post("/api/v1/auth/login", new { email = "owner@example.com", password = "definitely not the password" });
+        var nobody = await Post("/api/v1/auth/login", new { email = "nobody@example.com", password = "whatever it might be" });
 
-        var me = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
-        me.Headers.Add("CF-Connecting-IP", NewIp());
-        me.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        right.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await right.Content.ReadAsStringAsync()).Should().Contain("Sign-in is closed").And.NotContain("token");
 
-        (await _client.SendAsync(me)).StatusCode.Should().Be(HttpStatusCode.OK);
+        // The answer is the same whatever is sent, so the closed door cannot be used to test passwords or find accounts.
+        var body = await right.Content.ReadAsStringAsync();
+        (await wrong.Content.ReadAsStringAsync()).Should().Be(body);
+        (await nobody.Content.ReadAsStringAsync()).Should().Be(body);
     }
 
     [Fact]

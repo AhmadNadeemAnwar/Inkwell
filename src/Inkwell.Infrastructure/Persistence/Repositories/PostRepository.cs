@@ -144,6 +144,30 @@ public class PostRepository : IPostRepository
             .Take(limit)
             .ToListAsync(ct);
 
+    public Task<PostRevision?> GetRevisionAsync(Guid postId, Guid revisionId, CancellationToken ct = default) =>
+        _db.PostRevisions.AsNoTracking().FirstOrDefaultAsync(r => r.PostId == postId && r.Id == revisionId, ct);
+
+    public async Task<DateTimeOffset?> GetLatestRevisionTimeAsync(Guid postId, CancellationToken ct = default) =>
+        await _db.PostRevisions
+            .Where(r => r.PostId == postId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => (DateTimeOffset?)r.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+    public async Task TrimRevisionsAsync(Guid postId, int keep, CancellationToken ct = default)
+    {
+        // Read the ids to drop first: "delete all but the newest N" as one statement is not portable.
+        var surplus = await _db.PostRevisions
+            .Where(r => r.PostId == postId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip(keep)
+            .Select(r => r.Id)
+            .ToListAsync(ct);
+
+        if (surplus.Count > 0)
+            await _db.PostRevisions.Where(r => surplus.Contains(r.Id)).ExecuteDeleteAsync(ct);
+    }
+
     private IQueryable<Post> BaseQuery() =>
         _db.Posts.AsNoTracking()
             .Include(p => p.Author)

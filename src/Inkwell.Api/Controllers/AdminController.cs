@@ -16,8 +16,13 @@ namespace Inkwell.Api.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IAdminService _admin;
+    private readonly IActivityLog _activity;
 
-    public AdminController(IAdminService admin) => _admin = admin;
+    public AdminController(IAdminService admin, IActivityLog activity)
+    {
+        _admin = admin;
+        _activity = activity;
+    }
 
     /// <summary>Who is signed in, so the portal can confirm the session is still valid.</summary>
     [HttpGet("me")]
@@ -26,6 +31,16 @@ public class AdminController : ControllerBase
     [HttpGet("stats")]
     public async Task<ActionResult<AdminStatsDto>> Stats(CancellationToken ct) =>
         Ok(await _admin.GetStatsAsync(ct));
+
+    /// <summary>What has been done in the admin portal, newest first.</summary>
+    [HttpGet("activity")]
+    public async Task<ActionResult<PagedResponse<ActivityDto>>> Activity([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
+        Ok(PagedResponse<ActivityDto>.From(await _activity.GetPageAsync(Math.Max(1, pageNumber), Math.Clamp(pageSize, 1, 100), ct)));
+
+    /// <summary>Every post as one file, as a backup that does not depend on this site.</summary>
+    [HttpGet("export")]
+    public async Task<ActionResult<ExportDto>> Export(CancellationToken ct) =>
+        Ok(await _admin.ExportAsync(Admin, ct));
 
     // ---- Posts ---------------------------------------------------------------------------
 

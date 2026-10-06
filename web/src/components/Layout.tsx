@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
-import { Avatar } from './ui'
+import { PORTFOLIO_URL } from '../lib/site'
 
 export function Layout() {
-  const { user, logout, allowPublicSignUp } = useAuth()
   const navigate = useNavigate()
   const [term, setTerm] = useState('')
 
@@ -31,28 +29,26 @@ export function Layout() {
             />
           </form>
 
-          <nav className="header__nav">
-            {user ? (
-              <>
-                <Link className="btn btn--ghost" to="/me/bookmarks">Saved</Link>
-                <Link to={`/@${user.handle}`} title={user.displayName}>
-                  <Avatar author={user} />
-                </Link>
-                <button className="btn btn--ghost" onClick={() => { logout(); navigate('/') }}>
-                  Sign out
-                </button>
-              </>
-            ) : allowPublicSignUp ? (
-              <>
-                <Link className="btn btn--ghost" to="/login">Sign in</Link>
-                <Link className="btn btn--primary" to="/register">Get started</Link>
-              </>
-            ) : null}
-          </nav>
+          {PORTFOLIO_URL && (
+            <nav className="header__nav" aria-label="Elsewhere">
+              <a className="btn btn--ghost" href={PORTFOLIO_URL}>About the author</a>
+            </nav>
+          )}
         </div>
       </header>
 
       <Outlet />
+
+      <footer className="footer">
+        <div className="footer__inner">
+          <span>Inkwell</span>
+          <nav aria-label="Site">
+            <a href="/rss.xml">RSS feed</a>
+            <Link to="/privacy">Privacy</Link>
+            {PORTFOLIO_URL && <a href={PORTFOLIO_URL}>About the author</a>}
+          </nav>
+        </div>
+      </footer>
     </div>
   )
 }

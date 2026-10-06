@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { PostSummary } from '../api/types'
-import { Avatar, TagPill, formatDate } from './ui'
+import { Avatar, ErrorNote, Spinner, TagPill, formatDate } from './ui'
 
 export function PostCard({ post }: { post: PostSummary }) {
   const href = `/p/${post.slug}`
@@ -11,7 +11,6 @@ export function PostCard({ post }: { post: PostSummary }) {
         <Avatar author={post.author} />
         <Link to={`/@${post.author.handle}`}>{post.author.displayName}</Link>
         {post.publishedAt && <span className="faint">· {formatDate(post.publishedAt)}</span>}
-        {post.status === 'Draft' && <span className="pill">Draft</span>}
       </div>
 
       <Link to={href}>
@@ -42,5 +41,35 @@ export function PostList({ posts, emptyLabel }: { posts: PostSummary[]; emptyLab
     <div className="post-list">
       {posts.map((post) => <PostCard key={post.id} post={post} />)}
     </div>
+  )
+}
+
+interface Paged {
+  posts: PostSummary[]
+  loading: boolean
+  loadingMore: boolean
+  error: string | null
+  hasMore: boolean
+  loadMore: () => void
+}
+
+/** A list that starts with one page and grows when the reader asks for more. */
+export function PagedPostList({ list, emptyLabel }: { list: Paged; emptyLabel: string }) {
+  if (list.loading) return <Spinner />
+  // A failure on the first page has nothing to show; a failure on a later page keeps what is there.
+  if (list.error && list.posts.length === 0) return <ErrorNote message={list.error} />
+
+  return (
+    <>
+      <PostList posts={list.posts} emptyLabel={emptyLabel} />
+      {list.error && <ErrorNote message={list.error} />}
+      {list.hasMore && (
+        <div className="load-more">
+          <button className="btn" onClick={list.loadMore} disabled={list.loadingMore}>
+            {list.loadingMore ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
+      )}
+    </>
   )
 }

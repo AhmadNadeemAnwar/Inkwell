@@ -13,21 +13,33 @@ public sealed class PostService : IPostService
 {
     private const int MaxTagsPerPost = 5;
 
+    /// <summary>
+    /// The editor saves every few seconds, so a snapshot per save would be thousands of near-identical
+    /// copies. One is kept at most this often, which is still fine-grained enough to undo a bad edit.
+    /// </summary>
+    public static readonly TimeSpan RevisionInterval = TimeSpan.FromMinutes(10);
+
+    /// <summary>Older snapshots beyond this many are dropped, to stay inside the free database allowance.</summary>
+    public const int MaxRevisionsPerPost = 30;
+
     private readonly IPostRepository _posts;
     private readonly ITagRepository _tags;
     private readonly IEngagementRepository _engagement;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _time;
 
     public PostService(
         IPostRepository posts,
         ITagRepository tags,
         IEngagementRepository engagement,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        TimeProvider? time = null)
     {
         _posts = posts;
         _tags = tags;
         _engagement = engagement;
         _unitOfWork = unitOfWork;
+        _time = time ?? TimeProvider.System;
     }
 
     public async Task<PostDetailDto> CreateDraftAsync(CreatePostRequest request, Guid authorId, CancellationToken ct = default)
@@ -48,15 +60,26 @@ public sealed class PostService : IPostService
         var post = await _posts.GetByIdAsync(id, ct) ?? throw new NotFoundException(nameof(Post), id);
         post.EnsureOwnedBy(authorId);
 
-        // Snapshot the pre-edit body first, so a bad edit is always recoverable.
-        await _posts.AddRevisionAsync(new PostRevision(post.Id, post.Title, post.ContentJson), ct);
-
         PostContent.Validate(request.ContentJson);
+
+        // Snapshot the pre-edit version first, so a bad edit is recoverable. Skipped when nothing a
+        // snapshot holds is changing, and when one was taken recently (see RevisionInterval).
+        var changes = post.Title != request.Title.Trim() || post.ContentJson != request.ContentJson;
+        var snapshot = false;
+        if (changes)
+        {
+            var latest = await _posts.GetLatestRevisionTimeAsync(post.Id, ct);
+            snapshot = latest is null || _time.GetUtcNow() - latest.Value >= RevisionInterval;
+            if (snapshot) await _posts.AddRevisionAsync(new PostRevision(post.Id, post.Title, post.ContentJson), ct);
+        }
+
         var plainText = ProseMirrorText.Extract(request.ContentJson);
         post.UpdateDraft(request.Title, request.Subtitle, request.ContentJson, plainText, request.CoverImageUrl);
 
         await SyncTagsAsync(post, request.Tags, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+
+        if (snapshot) await _posts.TrimRevisionsAsync(post.Id, MaxRevisionsPerPost, ct);
 
         return await LoadDetailAsync(post.Id, authorId, ct);
     }
@@ -153,6 +176,15 @@ public sealed class PostService : IPostService
 
         var revisions = await _posts.GetRevisionsAsync(postId, limit, ct);
         return revisions.Select(r => r.ToDto()).ToList();
+    }
+
+    public async Task<PostRevisionDetailDto> GetRevisionAsync(Guid postId, Guid revisionId, Guid authorId, CancellationToken ct = default)
+    {
+        var post = await _posts.GetByIdAsync(postId, ct) ?? throw new NotFoundException(nameof(Post), postId);
+        post.EnsureOwnedBy(authorId);
+
+        var revision = await _posts.GetRevisionAsync(postId, revisionId, ct) ?? throw new NotFoundException(nameof(PostRevision), revisionId);
+        return new PostRevisionDetailDto(revision.Id, revision.Title, revision.ContentJson, revision.CreatedAt);
     }
 
     /// <summary>

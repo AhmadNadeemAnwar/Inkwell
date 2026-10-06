@@ -89,6 +89,42 @@ export interface StoredImage {
   size: number
 }
 
+/** How the signed-in person appears to readers. */
+export interface Profile {
+  id: string
+  email: string
+  handle: string
+  displayName: string
+  bio: string | null
+  avatarUrl: string | null
+  websiteUrl: string | null
+}
+
+export interface ProfileInput {
+  displayName: string
+  bio: string | null
+  avatarUrl: string | null
+  websiteUrl: string | null
+}
+
+export interface ActivityEntry {
+  id: string
+  at: string
+  actor: string
+  action: string
+  subject: string
+}
+
+export interface PostRevision {
+  id: string
+  title: string
+  createdAt: string
+}
+
+export interface PostRevisionDetail extends PostRevision {
+  contentJson: string
+}
+
 export interface PostInput {
   title: string
   subtitle: string | null

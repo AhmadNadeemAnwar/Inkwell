@@ -385,3 +385,16 @@ input:focus, textarea:focus, select:focus {
 .prose__references li { overflow-wrap: anywhere; }
 
 .reaction__count { font-variant-numeric: tabular-nums; opacity: 0.75; margin-left: 0.15rem; }
+
+/* ---- Footer, load more, privacy ----------------------------------------------------------- */
+
+.footer { border-top: 1px solid var(--border); margin-top: auto; }
+.footer__inner { max-width: 68rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-faint); }
+.footer nav { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+.footer a { color: var(--text-muted); }
+.footer a:hover { color: var(--accent); }
+
+.load-more { display: flex; justify-content: center; padding: 1.5rem 0 0; }
+
+.legal h2 { font-size: 1.25rem; }
+.legal li { margin-bottom: 0.8em; }

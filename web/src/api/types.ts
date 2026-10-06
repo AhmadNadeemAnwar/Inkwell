@@ -32,17 +32,10 @@ export interface PostSummary {
   tags: Tag[]
 }
 
-export interface ViewerState {
-  hasBookmarked: boolean
-  isFollowingAuthor: boolean
-  isAuthor: boolean
-}
-
 export interface PostDetail extends Omit<PostSummary, 'excerpt'> {
   contentJson: string
   viewCount: number
   updatedAt: string
-  viewer: ViewerState | null
 }
 
 export type ReactionKind = 'clap' | 'insightful'
@@ -55,15 +48,6 @@ export interface ReactionState {
   markedInsightful: boolean
 }
 
-export interface Comment {
-  id: string
-  body: string
-  isDeleted: boolean
-  createdAt: string
-  author: Author
-  replies: Comment[]
-}
-
 export interface Profile {
   id: string
   handle: string
@@ -73,26 +57,6 @@ export interface Profile {
   websiteUrl: string | null
   joinedAt: string
   postCount: number
-  followerCount: number
-  followingCount: number
-  isFollowing: boolean
-  isSelf: boolean
-}
-
-export interface CurrentUser {
-  id: string
-  email: string
-  handle: string
-  displayName: string
-  bio: string | null
-  avatarUrl: string | null
-  websiteUrl: string | null
-}
-
-export interface AuthResponse {
-  token: string
-  expiresAt: string
-  user: CurrentUser
 }
 
 export interface Paged<T> {

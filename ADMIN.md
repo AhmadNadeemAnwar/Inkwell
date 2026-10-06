@@ -9,6 +9,8 @@ A private site at **https://admin.ahmadnadeem.dev** for running Inkwell and edit
 | Comments | Every comment across the site: **remove** |
 | Topics | **Rename**, **merge** and **delete** tags |
 | Portfolio | Create, edit and delete your site's **blog**, **projects** and **updates** (Markdown, with a live preview) |
+| Profile | Your name, photo, bio and website, as readers see them beside every post |
+| Activity | A history of what has been done in the portal, kept for 180 days |
 
 Sign-up stays closed. Only your own account can sign in, with your email and a code from an
 authenticator app. There is no password on this site: your phone is the key, so keep it locked.
@@ -150,6 +152,23 @@ editor or in the Posts list.
 | Draft | Only you. Not finished yet. |
 | Published | Everyone. The first publish fixes its address for good. |
 | Not active | Only you. Switched off; it keeps its address, so publishing again restores the same link. |
+
+**Earlier versions:** in the editor, *Earlier versions* (under Topics) lists saved copies of a post.
+A copy is kept when the title or the writing changes, at most once every ten minutes, and the newest
+30 are kept. *Restore* puts a version back into the editor as unsaved changes; nothing is overwritten
+until you press Save.
+
+**Backup:** *Export all* on the Posts page saves every post, including drafts and posts that are not
+active, to one file on your device. It holds each post's words as plain text and its full body with
+sections. Pictures are not inside the file; it records which pictures each post uses.
+
+**Activity:** sign-ins (and failed attempts on your address), status changes made from the Posts
+list or the editor's Status menu, deletions, topic changes, portfolio saves and exports. Writing and
+saving a post is not listed; that is what *Earlier versions* is for.
+
+**No passwords anywhere:** the deployed site has email-and-password sign-in switched off
+(`Accounts:AllowPasswordSignIn` is false in production). The authenticator code is the only way in,
+and the public site has no sign-in page at all.
 
 **Reader numbers:** readers have no accounts, so the site tells them apart by a random id each
 browser makes up for itself. Only a scrambled form of it is stored, and it is not tied to a person.

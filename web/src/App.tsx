@@ -1,57 +1,37 @@
-import type { ReactElement } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { AuthProvider, useAuth } from './auth/AuthContext'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
-import { EmptyState, Spinner } from './components/ui'
-import { LoginPage, RegisterPage } from './pages/AuthPages'
+import { EmptyState } from './components/ui'
+import { useTitle } from './hooks/useTitle'
 import { HomePage } from './pages/HomePage'
-import { BookmarksPage } from './pages/LibraryPages'
 import { PostPage } from './pages/PostPage'
+import { PrivacyPage } from './pages/PrivacyPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SearchPage } from './pages/SearchPage'
 import { TagPage } from './pages/TagPage'
 
-/** Waits for the session check before deciding, so a signed-in reload never bounces to /login. */
-function RequireAuth({ children }: { children: ReactElement }) {
-  const { user, loading } = useAuth()
-
-  if (loading) return <main className="main"><Spinner /></main>
-  if (!user) return <Navigate to="/login" replace />
-  return children
+function NotFound() {
+  useTitle('Page not found')
+  return <main className="main"><EmptyState title="Page not found" /></main>
 }
 
-/** On a closed site the sign-up page does not exist, so it answers like any other unknown address. */
-function RegisterRoute() {
-  const { allowPublicSignUp, signUpPolicyKnown } = useAuth()
-
-  if (!signUpPolicyKnown) return <main className="main"><Spinner /></main>
-  if (!allowPublicSignUp) return <main className="main"><EmptyState title="Page not found" /></main>
-  return <RegisterPage />
-}
-
+// Readers have no accounts: there is nothing here to sign in to. Writing happens in the admin portal.
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/tag/:slug" element={<TagPage />} />
-            <Route path="/p/:slug" element={<PostPage />} />
-            {/* React Router cannot match a partial segment like "/@:handle", so profiles take the
-                whole segment and ProfilePage requires the leading "@". Static routes above and
-                below outrank this one, so /login, /search etc. are unaffected. */}
-            <Route path="/:handle" element={<ProfilePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterRoute />} />
-
-            <Route path="/me/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />
-
-            <Route path="*" element={<main className="main"><EmptyState title="Page not found" /></main>} />
-          </Route>
-        </Routes>
-      </AuthProvider>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/tag/:slug" element={<TagPage />} />
+          <Route path="/p/:slug" element={<PostPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          {/* React Router cannot match a partial segment like "/@:handle", so profiles take the
+              whole segment and ProfilePage requires the leading "@". Static routes above outrank
+              this one, so /search, /privacy etc. are unaffected. */}
+          <Route path="/:handle" element={<ProfilePage />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
     </BrowserRouter>
   )
 }

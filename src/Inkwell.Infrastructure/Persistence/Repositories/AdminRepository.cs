@@ -136,4 +136,12 @@ public class AdminRepository : IAdminRepository
     }
 
     public void RemoveTag(Tag tag) => _db.Tags.Remove(tag);
+
+    public async Task<IReadOnlyList<Post>> GetAllPostsAsync(CancellationToken ct = default) =>
+        await _db.Posts.AsNoTracking()
+            .Include(p => p.Author)
+            .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
+            .OrderBy(p => p.CreatedAt)
+            .AsSplitQuery()
+            .ToListAsync(ct);
 }

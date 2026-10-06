@@ -73,6 +73,9 @@ public sealed record UpdatePostRequest(
 
 public sealed record PostRevisionDto(Guid Id, string Title, DateTimeOffset CreatedAt);
 
+/// <summary>A saved revision with its body, for putting an earlier version back into the editor.</summary>
+public sealed record PostRevisionDetailDto(Guid Id, string Title, string ContentJson, DateTimeOffset CreatedAt);
+
 /// <summary>Query-string binding for the browse/search endpoint.</summary>
 public sealed class PostQueryParameters
 {

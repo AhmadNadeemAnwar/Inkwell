@@ -76,6 +76,19 @@ public class PostgresTranslationTests : IDisposable
         });
 
     [Fact]
+    public Task Revision_lookups_and_trimming_translate() =>
+        AssertTranslatesAsync(async () =>
+        {
+            var posts = new PostRepository(_db);
+            await posts.GetLatestRevisionTimeAsync(Guid.NewGuid());
+            await posts.TrimRevisionsAsync(Guid.NewGuid(), 30);
+        });
+
+    [Fact]
+    public Task Export_query_translates() =>
+        AssertTranslatesAsync(() => new AdminRepository(_db).GetAllPostsAsync());
+
+    [Fact]
     public Task Personal_feed_translates() =>
         AssertTranslatesAsync(() => new PostRepository(_db).GetPersonalFeedAsync(Guid.NewGuid(), 1, 20));
 

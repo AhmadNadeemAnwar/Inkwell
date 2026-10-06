@@ -25,4 +25,7 @@ public interface IAdminRepository
     Task MergeTagsAsync(Guid sourceId, Guid targetId, CancellationToken ct = default);
 
     void RemoveTag(Tag tag);
+
+    /// <summary>Every post with its author and topics, oldest first, for a full backup.</summary>
+    Task<IReadOnlyList<Post>> GetAllPostsAsync(CancellationToken ct = default);
 }

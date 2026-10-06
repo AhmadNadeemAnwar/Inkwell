@@ -9,6 +9,18 @@ import { Empty, ErrorNote, PageHeader, Pagination, Spinner, formatDate, formatNu
 
 const STATUSES: PostStatus[] = ['Draft', 'Published', 'Inactive']
 
+/** Hands the browser a file to save. The address is released straight away so it does not linger. */
+function saveAsFile(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 export function PostsPage() {
   const confirm = useConfirm()
   const notify = useToast()
@@ -19,6 +31,20 @@ export function PostsPage() {
   const [term, setTerm] = useState('')
   const [page, setPage] = useState(1)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
+
+  async function exportAll() {
+    setExporting(true)
+    try {
+      const data = await api.exportPosts()
+      saveAsFile(`inkwell-posts-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2))
+      notify(`Saved ${formatNumber(data.postCount)} ${data.postCount === 1 ? 'post' : 'posts'} to your downloads.`)
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'The export did not work.', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   // Wait for a pause in typing before searching, so each keystroke is not a request.
   useEffect(() => {
@@ -75,6 +101,9 @@ export function PostsPage() {
   return (
     <>
       <PageHeader title="Posts">
+        <button className="btn" onClick={exportAll} disabled={exporting} title="Save every post, including drafts, to a file on this device">
+          {exporting ? 'Exporting…' : 'Export all'}
+        </button>
         <Link className="btn btn--primary" to="/posts/new">New post</Link>
       </PageHeader>
 

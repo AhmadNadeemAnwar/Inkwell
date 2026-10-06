@@ -21,6 +21,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<TagFollow> TagFollows => Set<TagFollow>();
     public DbSet<PostRevision> PostRevisions => Set<PostRevision>();
     public DbSet<StoredImage> Images => Set<StoredImage>();
+    public DbSet<ActivityEntry> ActivityEntries => Set<ActivityEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

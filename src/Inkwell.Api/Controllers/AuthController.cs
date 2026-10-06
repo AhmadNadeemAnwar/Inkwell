@@ -28,7 +28,8 @@ public class AuthController : ControllerBase
     [HttpGet("options")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthOptionsDto), StatusCodes.Status200OK)]
-    public ActionResult<AuthOptionsDto> Options() => Ok(new AuthOptionsDto(_accounts.AllowPublicSignUp));
+    public ActionResult<AuthOptionsDto> Options() =>
+        Ok(new AuthOptionsDto(_accounts.AllowPublicSignUp && _accounts.AllowPasswordSignIn, _accounts.AllowPasswordSignIn));
 
     /// <summary>Creates an account and returns a signed token.</summary>
     [HttpPost("register")]
@@ -36,7 +37,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request, CancellationToken ct)
     {
         // Enforced here, not just hidden in the UI: a closed site must refuse direct API calls too.
-        if (!_accounts.AllowPublicSignUp) throw new ForbiddenException("Sign-ups are closed.");
+        if (!_accounts.AllowPublicSignUp || !_accounts.AllowPasswordSignIn) throw new ForbiddenException("Sign-ups are closed.");
 
         var response = await _auth.RegisterAsync(request, ct);
         return Created($"/api/v1/users/{response.User.Handle}", response);
@@ -44,8 +45,13 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
-    public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken ct) =>
-        Ok(await _auth.LoginAsync(request, ct));
+    public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken ct)
+    {
+        // Refused before any password is looked at, so a closed door cannot be used to test passwords.
+        if (!_accounts.AllowPasswordSignIn) throw new ForbiddenException("Sign-in is closed.");
+
+        return Ok(await _auth.LoginAsync(request, ct));
+    }
 
     /// <summary>Returns the signed-in user, used by the client to restore a session on page load.</summary>
     [HttpGet("me")]
@@ -55,4 +61,4 @@ public class AuthController : ControllerBase
         Ok(await _auth.GetCurrentAsync(_currentUser.RequireUserId(), ct));
 }
 
-public sealed record AuthOptionsDto(bool AllowPublicSignUp);
+public sealed record AuthOptionsDto(bool AllowPublicSignUp, bool AllowPasswordSignIn);

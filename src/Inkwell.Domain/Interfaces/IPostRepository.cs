@@ -31,4 +31,9 @@ public interface IPostRepository
     void Remove(Post post);
     Task AddRevisionAsync(PostRevision revision, CancellationToken ct = default);
     Task<IReadOnlyList<PostRevision>> GetRevisionsAsync(Guid postId, int limit, CancellationToken ct = default);
+    Task<PostRevision?> GetRevisionAsync(Guid postId, Guid revisionId, CancellationToken ct = default);
+    Task<DateTimeOffset?> GetLatestRevisionTimeAsync(Guid postId, CancellationToken ct = default);
+
+    /// <summary>Removes all but the newest <paramref name="keep"/> saved revisions of a post.</summary>
+    Task TrimRevisionsAsync(Guid postId, int keep, CancellationToken ct = default);
 }

@@ -1,0 +1,199 @@
+import { describe, expect, it } from 'vitest'
+import { absoluteImage, buildRss, buildSitemap, describePost, escapeText, headTags, plainText, slugFromPath, summarise } from './meta.js'
+
+const SITE = { siteName: 'Inkwell', siteOrigin: 'https://inkwell.example', apiBase: 'https://api.example', description: 'Articles on Inkwell.' }
+const IMAGE = '/api/v1/images/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11'
+
+const paragraph = (words) => ({ type: 'paragraph', content: [{ type: 'text', text: words }] })
+const post = (overrides = {}) => ({
+  slug: 'a-post',
+  title: 'A post',
+  subtitle: null,
+  excerpt: 'An excerpt.',
+  coverImageUrl: null,
+  publishedAt: '2026-10-01T09:30:00+00:00',
+  author: { displayName: 'Ahmad Nadeem' },
+  tags: [{ name: 'Engineering' }],
+  contentJson: JSON.stringify({ type: 'sections', content: [{ type: 'textSection', content: [paragraph('First paragraph.'), paragraph('Second paragraph.')] }] }),
+  ...overrides,
+})
+
+describe('escapeText', () => {
+  it('neutralises everything that could end a tag or an attribute', () => {
+    expect(escapeText(`<script>alert("x")</script> & 'y'`)).toBe('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; &#39;y&#39;')
+  })
+
+  it('drops characters XML forbids, and copes with nothing', () => {
+    expect(escapeText('a\u0000b\u0008c')).toBe('abc')
+    expect(escapeText(null)).toBe('')
+  })
+})
+
+describe('slugFromPath', () => {
+  it('reads the post address from a post page', () => {
+    expect(slugFromPath('/p/what-i-learned')).toBe('what-i-learned')
+    expect(slugFromPath('/p/what-i-learned/')).toBe('what-i-learned')
+  })
+
+  it.each(['/', '/p/', '/p/a/b', '/search', '/p/Has%20Space', '/p/..%2Fadmin', '/p/%E0%A4%A', '/p/UPPER', '/p/a?b', `/p/${'x'.repeat(121)}`])(
+    'refuses %s, so it is never passed to the API',
+    (path) => {
+      expect(slugFromPath(path)).toBeNull()
+    },
+  )
+})
+
+describe('plainText', () => {
+  it('joins the words of every block, keeping blocks apart', () => {
+    expect(plainText(post().contentJson)).toBe('First paragraph. Second paragraph.')
+  })
+
+  it('reads a post written before sections existed, and picture captions', () => {
+    expect(plainText(JSON.stringify({ type: 'doc', content: [paragraph('Older post.')] }))).toBe('Older post.')
+    expect(plainText(JSON.stringify({ type: 'sections', content: [{ type: 'imageSection', attrs: { imageId: 'x', caption: 'A caption' } }] }))).toBe('A caption')
+  })
+
+  it('returns nothing for a body it cannot read', () => {
+    expect(plainText('not json')).toBe('')
+    expect(plainText('null')).toBe('')
+  })
+})
+
+describe('summarise', () => {
+  it('leaves short text alone and tidies its spacing', () => {
+    expect(summarise('  Short   text. ')).toBe('Short text.')
+  })
+
+  it('cuts long text at a word, with an ellipsis, inside the limit', () => {
+    const long = Array.from({ length: 80 }, (_, i) => `word${i}`).join(' ')
+
+    const short = summarise(long, 50)
+
+    expect(short.length).toBeLessThanOrEqual(51)
+    expect(short.endsWith('…')).toBe(true)
+    expect(long.startsWith(short.slice(0, -1))).toBe(true)
+    expect(short).not.toMatch(/\s…$/)
+  })
+})
+
+describe('absoluteImage', () => {
+  it('points an uploaded picture at the API', () => {
+    expect(absoluteImage(IMAGE, SITE.apiBase)).toBe(`https://api.example${IMAGE}`)
+  })
+
+  it('keeps an https link as it is', () => {
+    expect(absoluteImage('https://images.example/cover.jpg', SITE.apiBase)).toBe('https://images.example/cover.jpg')
+  })
+
+  it.each(['http://insecure.example/x.png', 'javascript:alert(1)', '/api/v1/admin/stats', '//evil.example/x.png', '', null, 42])('drops %s', (value) => {
+    expect(absoluteImage(value, SITE.apiBase)).toBeNull()
+  })
+})
+
+describe('describePost', () => {
+  it('uses the subtitle as the description when there is one', () => {
+    expect(describePost(post({ subtitle: 'The subtitle.' }), SITE).description).toBe('The subtitle.')
+  })
+
+  it('falls back to the opening words of the post, then to a general line', () => {
+    expect(describePost(post(), SITE).description).toBe('First paragraph. Second paragraph.')
+    expect(describePost(post({ contentJson: '{}' }), SITE).description).toBe('An article on Inkwell.')
+  })
+
+  it('builds the address, title and picture', () => {
+    const meta = describePost(post({ coverImageUrl: IMAGE }), SITE)
+
+    expect(meta).toMatchObject({
+      title: 'A post · Inkwell',
+      heading: 'A post',
+      url: 'https://inkwell.example/p/a-post',
+      image: `https://api.example${IMAGE}`,
+      author: 'Ahmad Nadeem',
+    })
+  })
+})
+
+describe('headTags', () => {
+  it('includes what LinkedIn, WhatsApp and X look for', () => {
+    const tags = headTags(describePost(post({ coverImageUrl: IMAGE }), SITE), 'Inkwell')
+
+    expect(tags).toContain('<link rel="canonical" href="https://inkwell.example/p/a-post">')
+    expect(tags).toContain('<meta property="og:title" content="A post">')
+    expect(tags).toContain('<meta property="og:type" content="article">')
+    expect(tags).toContain(`<meta property="og:image" content="https://api.example${IMAGE}">`)
+    expect(tags).toContain('<meta name="twitter:card" content="summary_large_image">')
+    expect(tags).toContain('<meta name="description" content="First paragraph. Second paragraph.">')
+  })
+
+  it('uses the small card and leaves picture tags out when there is no picture', () => {
+    const tags = headTags(describePost(post(), SITE), 'Inkwell')
+
+    expect(tags).toContain('<meta name="twitter:card" content="summary">')
+    expect(tags).not.toContain('og:image')
+    expect(tags).not.toContain('twitter:image')
+  })
+
+  it('cannot be broken out of by a hostile title or subtitle', () => {
+    const tags = headTags(describePost(post({ title: '"><script>alert(1)</script>', subtitle: `'"><img src=x onerror=alert(2)>` }), SITE), 'Inkwell')
+
+    expect(tags).not.toContain('<script>')
+    expect(tags).not.toContain('<img')
+    expect(tags).toContain('&quot;&gt;&lt;script&gt;')
+  })
+})
+
+describe('buildSitemap', () => {
+  it('lists the home page, every post with its date, and the privacy page', () => {
+    const xml = buildSitemap([post(), post({ slug: 'another-post', publishedAt: '2026-09-01T00:00:00Z' })], SITE.siteOrigin)
+
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true)
+    expect(xml).toContain('<loc>https://inkwell.example/</loc>')
+    expect(xml).toContain('<url><loc>https://inkwell.example/p/a-post</loc><lastmod>2026-10-01T09:30:00.000Z</lastmod></url>')
+    expect(xml).toContain('<loc>https://inkwell.example/p/another-post</loc>')
+    expect(xml).toContain('<loc>https://inkwell.example/privacy</loc>')
+  })
+
+  it('leaves out anything without a usable address, and a date it cannot read', () => {
+    const xml = buildSitemap([post({ slug: null }), post({ slug: '../admin' }), null, post({ publishedAt: 'not a date' })], SITE.siteOrigin)
+
+    expect(xml.match(/<url>/g)).toHaveLength(3)
+    expect(xml).not.toContain('admin')
+    expect(xml).not.toContain('lastmod')
+  })
+
+  it('is still a valid sitemap with no posts', () => {
+    expect(buildSitemap([], SITE.siteOrigin).match(/<url>/g)).toHaveLength(2)
+  })
+})
+
+describe('buildRss', () => {
+  it('describes the site and each post', () => {
+    const xml = buildRss([post({ subtitle: 'The subtitle.' })], SITE)
+
+    expect(xml).toContain('<title>Inkwell</title>')
+    expect(xml).toContain('<atom:link href="https://inkwell.example/rss.xml" rel="self" type="application/rss+xml"/>')
+    expect(xml).toContain('<item><title>A post</title><link>https://inkwell.example/p/a-post</link>')
+    expect(xml).toContain('<guid isPermaLink="true">https://inkwell.example/p/a-post</guid>')
+    expect(xml).toContain('<pubDate>Thu, 01 Oct 2026 09:30:00 GMT</pubDate>')
+    expect(xml).toContain('<description>The subtitle.</description>')
+    expect(xml).toContain('<category>Engineering</category>')
+  })
+
+  it('falls back to the excerpt when there is no subtitle', () => {
+    expect(buildRss([post()], SITE)).toContain('<description>An excerpt.</description>')
+  })
+
+  it('escapes titles so one post cannot corrupt the feed', () => {
+    const xml = buildRss([post({ title: 'Tom & Jerry <3 "quotes"', tags: [{ name: 'R&D' }] })], SITE)
+
+    expect(xml).toContain('<title>Tom &amp; Jerry &lt;3 &quot;quotes&quot;</title>')
+    expect(xml).toContain('<category>R&amp;D</category>')
+  })
+
+  it('is a valid empty feed when nothing is published', () => {
+    const xml = buildRss([], SITE)
+
+    expect(xml).not.toContain('<item>')
+    expect(xml.trimEnd().endsWith('</channel></rss>')).toBe(true)
+  })
+})

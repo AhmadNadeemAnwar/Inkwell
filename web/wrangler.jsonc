@@ -2,10 +2,22 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "inkwell",
   "compatibility_date": "2026-10-01",
+  // Adds link previews to post pages and builds the sitemap and feed. See worker/index.js.
+  "main": "worker/index.js",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     // Any path that is not a real file serves index.html, so /p/some-slug works on refresh.
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // The Worker runs only for these addresses. Everything else is served straight from the static
+    // files and does not count towards the free plan's 100,000 Worker runs a day.
+    "run_worker_first": ["/p/*", "/sitemap.xml", "/rss.xml"]
+  },
+  "vars": {
+    // Must match VITE_API_BASE in .env.production.
+    "API_BASE": "https://inkwell-zpbc.onrender.com",
+    "SITE_NAME": "Inkwell",
+    "SITE_DESCRIPTION": "Articles on Inkwell."
   },
   "routes": [
     { "pattern": "inkwell.ahmadnadeem.dev", "custom_domain": true }

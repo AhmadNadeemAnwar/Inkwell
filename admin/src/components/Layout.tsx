@@ -7,6 +7,8 @@ const links = [
   { to: '/comments', label: 'Comments' },
   { to: '/tags', label: 'Tags' },
   { to: '/portfolio', label: 'Portfolio' },
+  { to: '/profile', label: 'Profile' },
+  { to: '/activity', label: 'Activity' },
 ]
 
 export function Layout() {

@@ -5,12 +5,14 @@ import { AuthProvider, useAuth } from './auth/AuthContext'
 import { FeedbackProvider } from './components/feedback'
 import { Layout } from './components/Layout'
 import { Spinner } from './components/ui'
+import { ActivityPage } from './pages/ActivityPage'
 import { CommentsPage } from './pages/CommentsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { PortfolioEditPage } from './pages/PortfolioEditPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { PostsPage } from './pages/PostsPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { TagsPage } from './pages/TagsPage'
 
 // The editor is by far the largest part of the app, so it loads only when a post is opened.
@@ -49,6 +51,8 @@ export default function App() {
               <Route path="/posts/:id/edit" element={editor} />
               <Route path="/comments" element={<CommentsPage />} />
               <Route path="/tags" element={<TagsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/activity" element={<ActivityPage />} />
               <Route path="/portfolio" element={<Navigate to="/portfolio/projects" replace />} />
               <Route path="/portfolio/:collection" element={<PortfolioPage />} />
               {/* "_new" can never be a real file name (underscores are not allowed in them), so it cannot collide with an entry. */}

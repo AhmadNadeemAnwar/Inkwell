@@ -1,0 +1,5 @@
+# Everything here is meant to be read and found.
+User-agent: *
+Allow: /
+
+Sitemap: https://inkwell.ahmadnadeem.dev/sitemap.xml

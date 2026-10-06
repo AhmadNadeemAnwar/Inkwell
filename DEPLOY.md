@@ -41,6 +41,23 @@ Check `git status` before pushing: `*.db` files and `node_modules/` should not b
    (`postgresql://...`). The direct connection is the right one: migrations run on startup and
    use session-level locks, which pooled connections can break.
 
+## The public site's Worker
+
+`web/worker/index.js` is a small Cloudflare Worker deployed with the public site by the same
+`wrangler deploy`. It adds each post's title, description and picture to the page so shared links
+show a proper card, and it builds `/sitemap.xml` and `/rss.xml` from the API.
+
+- It runs only for `/p/*`, `/sitemap.xml` and `/rss.xml` (`run_worker_first` in `web/wrangler.jsonc`).
+  Every other request is a static file and does not count.
+- Free plan: 100,000 Worker runs a day, never billed. Past that, those three kinds of address would
+  fail until the next day (UTC); the rest of the site would keep working.
+- If the API is asleep or down, a post page is served without its preview rather than failing.
+- `API_BASE` in `web/wrangler.jsonc` must match `VITE_API_BASE` in `web/.env.production`.
+
+**Turning on the link to your portfolio:** once `https://ahmadnadeem.dev` loads, set
+`VITE_PORTFOLIO_URL=https://ahmadnadeem.dev` in `web/.env.production`, then rebuild and redeploy the
+public site. That adds "About the author" to the header and footer and a contact line to the privacy page.
+
 ## 2. API: Render
 
 1. Sign up at render.com with GitHub. **New + > Web Service**, pick the `inkwell` repo.

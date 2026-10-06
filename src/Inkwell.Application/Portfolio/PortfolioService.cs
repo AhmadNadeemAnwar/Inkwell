@@ -1,3 +1,4 @@
+using Inkwell.Application.Admin;
 using Inkwell.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -47,11 +48,13 @@ public sealed class PortfolioService : IPortfolioService
 
     private readonly IPortfolioContentStore _store;
     private readonly ILogger<PortfolioService> _logger;
+    private readonly IActivityLog _activity;
 
-    public PortfolioService(IPortfolioContentStore store, ILogger<PortfolioService> logger)
+    public PortfolioService(IPortfolioContentStore store, ILogger<PortfolioService> logger, IActivityLog? activity = null)
     {
         _store = store;
         _logger = logger;
+        _activity = activity ?? NoActivityLog.Instance;
     }
 
     public PortfolioStatusDto GetStatus() => new(_store.IsConfigured, _store.Repo, _store.Branch);
@@ -117,6 +120,7 @@ public sealed class PortfolioService : IPortfolioService
         var newSha = await _store.PutAsync(path, markdown, request.Sha, $"{verb} {collection}/{slug} (admin portal)", ct);
 
         _logger.LogInformation("Admin {Admin} saved portfolio entry {Collection}/{Slug}", admin, collection, slug);
+        await _activity.RecordAsync(admin, Activity.SavedPortfolioEntry, $"{collection}/{slug}", ct);
         var (frontmatter, body) = PortfolioContent.Parse(markdown);
         return new PortfolioEntryDto(collection, slug, newSha, frontmatter, body);
     }
@@ -132,6 +136,7 @@ public sealed class PortfolioService : IPortfolioService
 
         await _store.DeleteAsync(existing.Path, existing.Sha, $"Delete {collection}/{slug} (admin portal)", ct);
         _logger.LogWarning("Admin {Admin} deleted portfolio entry {Collection}/{Slug}", admin, collection, slug);
+        await _activity.RecordAsync(admin, Activity.DeletedPortfolioEntry, $"{collection}/{slug}", ct);
     }
 
     // ---- helpers -------------------------------------------------------------------------

@@ -3,6 +3,8 @@ import type { ChangeEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, assetUrl } from '../api/client'
 import type { PostStatus } from '../api/types'
+import type { PostRevisionDetail } from '../api/types'
+import { RevisionHistory } from '../components/RevisionHistory'
 import { SectionList } from '../components/SectionList'
 import { TagInput } from '../components/TagInput'
 import { useConfirm, useToast } from '../components/feedback'
@@ -237,7 +239,9 @@ export function PostEditPage() {
 
     setSaving(true)
     try {
-      const post = await api.setPostStatus(id, target)
+      // The admin route records the change in the Activity history; the post is then re-read for its address.
+      await api.adminSetPostStatus(id, target)
+      const post = await api.postForEdit(id)
       setStatus(post.status)
       setSlug(post.slug)
       notify(target === 'Published' ? 'Published. It is live on Inkwell now.' : `Post is now ${statusLabels[target].toLowerCase()}.`)
@@ -263,6 +267,13 @@ export function PostEditPage() {
     } finally {
       setCoverBusy(false)
     }
+  }
+
+  /** Puts an earlier version on screen as unsaved changes; the writer decides whether to keep it. */
+  function restoreRevision(revision: PostRevisionDetail) {
+    setTitle(revision.title)
+    setSections(parseContent(revision.contentJson))
+    notify('Earlier version restored. Press Save to keep it.')
   }
 
   function restore() {
@@ -342,6 +353,7 @@ export function PostEditPage() {
           <TagInput value={tags} onChange={setTags} />
           <p className="field__hint">Type a topic and press Enter. Topics are how readers find this post.</p>
         </div>
+        {postId && <RevisionHistory postId={postId} onRestore={restoreRevision} />}
       </section>
 
       <div className="actionbar" role="group" aria-label="Post actions">

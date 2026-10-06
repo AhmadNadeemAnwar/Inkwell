@@ -97,7 +97,13 @@ public class PostsController : ControllerBase
     [HttpGet("{id:guid}/revisions")]
     [Authorize]
     public async Task<ActionResult<IReadOnlyList<PostRevisionDto>>> Revisions(Guid id, CancellationToken ct) =>
-        Ok(await _posts.GetRevisionsAsync(id, _currentUser.RequireUserId(), 20, ct));
+        Ok(await _posts.GetRevisionsAsync(id, _currentUser.RequireUserId(), PostService.MaxRevisionsPerPost, ct));
+
+    /// <summary>One saved revision with its body, so an earlier version can be put back into the editor.</summary>
+    [HttpGet("{id:guid}/revisions/{revisionId:guid}")]
+    [Authorize]
+    public async Task<ActionResult<PostRevisionDetailDto>> Revision(Guid id, Guid revisionId, CancellationToken ct) =>
+        Ok(await _posts.GetRevisionAsync(id, revisionId, _currentUser.RequireUserId(), ct));
 
     [HttpPost]
     [Authorize]

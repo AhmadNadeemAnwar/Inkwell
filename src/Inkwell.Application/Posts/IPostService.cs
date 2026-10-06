@@ -27,4 +27,5 @@ public interface IPostService
     Task<PagedResult<PostSummaryDto>> GetBookmarksAsync(Guid userId, int pageNumber, int pageSize, CancellationToken ct = default);
     Task<IReadOnlyList<PostSummaryDto>> GetRelatedAsync(Guid postId, int limit = 4, CancellationToken ct = default);
     Task<IReadOnlyList<PostRevisionDto>> GetRevisionsAsync(Guid postId, Guid authorId, int limit = 20, CancellationToken ct = default);
+    Task<PostRevisionDetailDto> GetRevisionAsync(Guid postId, Guid revisionId, Guid authorId, CancellationToken ct = default);
 }

@@ -4,12 +4,12 @@
 # here and in .env.production together, or the browser will block every API call.
 #
 # style-src needs 'unsafe-inline' because React renders style="" attributes. Scripts are fully
-# locked down: no inline script, no eval, and the only outside origins are Cloudflare's own
-# Turnstile (sign-up bot check) and Web Analytics beacon, which Cloudflare injects automatically.
+# locked down: no inline script, no eval, and the only outside origin is Cloudflare's own Web
+# Analytics beacon, which Cloudflare injects automatically. Nothing may be framed in or out.
 # img-src allows any https host because authors may link cover images and avatars from anywhere.
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://inkwell-zpbc.onrender.com https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self' https://inkwell-zpbc.onrender.com https://cloudflareinsights.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin

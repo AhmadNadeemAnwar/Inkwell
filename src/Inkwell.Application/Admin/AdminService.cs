@@ -17,6 +17,7 @@ public interface IAdminService
     Task<PagedResult<AdminPostDto>> GetPostsAsync(string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default);
     Task UnpublishPostAsync(Guid postId, string admin, CancellationToken ct = default);
     Task SetPostStatusAsync(Guid postId, string status, string admin, CancellationToken ct = default);
+    Task<ExportDto> ExportAsync(string admin, CancellationToken ct = default);
     Task DeletePostAsync(Guid postId, string admin, CancellationToken ct = default);
 
     Task<PagedResult<AdminCommentDto>> GetCommentsAsync(int pageNumber, int pageSize, CancellationToken ct = default);
@@ -38,6 +39,7 @@ public sealed class AdminService : IAdminService
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _time;
     private readonly ILogger<AdminService> _logger;
+    private readonly IActivityLog _activity;
 
     public AdminService(
         IAdminRepository admin,
@@ -45,8 +47,10 @@ public sealed class AdminService : IAdminService
         ICommentRepository comments,
         IUnitOfWork unitOfWork,
         ILogger<AdminService> logger,
-        TimeProvider? time = null)
+        TimeProvider? time = null,
+        IActivityLog? activity = null)
     {
+        _activity = activity ?? NoActivityLog.Instance;
         _admin = admin;
         _posts = posts;
         _comments = comments;
@@ -104,6 +108,22 @@ public sealed class AdminService : IAdminService
 
         await _unitOfWork.SaveChangesAsync(ct);
         _logger.LogInformation("Admin {Admin} changed post {PostId} ({Title}) from {From} to {To}", admin, post.Id, post.Title, from, target);
+        await _activity.RecordAsync(admin, Activity.ChangedPostStatus, $"{post.Title}: {Label(from)} to {Label(target)}", ct);
+    }
+
+    private static string Label(PostStatus status) => status == PostStatus.Inactive ? "Not active" : status.ToString();
+
+    public async Task<ExportDto> ExportAsync(string admin, CancellationToken ct = default)
+    {
+        var posts = await _admin.GetAllPostsAsync(ct);
+        var exported = posts.Select(p => new ExportedPostDto(
+            p.Id, p.Title, p.Subtitle, p.Slug, p.Status.ToString(), p.Author.Handle, p.Author.DisplayName,
+            p.CreatedAt, p.UpdatedAt, p.PublishedAt,
+            p.PostTags.Where(pt => pt.Tag is not null).Select(pt => pt.Tag.Name).OrderBy(n => n).ToList(),
+            p.CoverImageUrl, p.ViewCount, p.ClapCount, p.InsightfulCount, p.PlainText, p.ContentJson)).ToList();
+
+        await _activity.RecordAsync(admin, Activity.ExportedPosts, $"{exported.Count} posts", ct);
+        return new ExportDto("Inkwell", 1, _time.GetUtcNow(), exported.Count, exported);
     }
 
     public async Task DeletePostAsync(Guid postId, string admin, CancellationToken ct = default)
@@ -118,6 +138,7 @@ public sealed class AdminService : IAdminService
         _posts.Remove(post);
         await _unitOfWork.SaveChangesAsync(ct);
         _logger.LogWarning("Admin {Admin} deleted post {PostId} ({Title})", admin, postId, post.Title);
+        await _activity.RecordAsync(admin, Activity.DeletedPost, post.Title, ct);
     }
 
     public async Task<PagedResult<AdminCommentDto>> GetCommentsAsync(int pageNumber, int pageSize, CancellationToken ct = default)
@@ -140,6 +161,7 @@ public sealed class AdminService : IAdminService
 
         await _unitOfWork.SaveChangesAsync(ct);
         _logger.LogWarning("Admin {Admin} removed comment {CommentId} on post {PostId}", admin, commentId, comment.PostId);
+        await _activity.RecordAsync(admin, Activity.RemovedComment, ct: ct);
     }
 
     public async Task<IReadOnlyList<AdminTagDto>> GetTagsAsync(CancellationToken ct = default)
@@ -157,6 +179,7 @@ public sealed class AdminService : IAdminService
 
         await _unitOfWork.SaveChangesAsync(ct);
         _logger.LogInformation("Admin {Admin} renamed tag {Slug} from '{Old}' to '{New}'", admin, tag.Slug, previous, tag.Name);
+        await _activity.RecordAsync(admin, Activity.RenamedTopic, $"{previous} to {tag.Name}", ct);
 
         var followers = (await _admin.GetTagsAsync(ct)).FirstOrDefault(r => r.Tag.Id == tagId)?.Followers ?? 0;
         return new AdminTagDto(tag.Id, tag.Name, tag.Slug, tag.PostCount, followers);
@@ -173,6 +196,7 @@ public sealed class AdminService : IAdminService
         await _unitOfWork.SaveChangesAsync(ct);
 
         _logger.LogWarning("Admin {Admin} merged tag {Source} into {Target}", admin, source.Slug, target.Slug);
+        await _activity.RecordAsync(admin, Activity.MergedTopic, $"{source.Name} into {target.Name}", ct);
     }
 
     public async Task DeleteTagAsync(Guid tagId, string admin, CancellationToken ct = default)
@@ -183,6 +207,7 @@ public sealed class AdminService : IAdminService
         await _unitOfWork.SaveChangesAsync(ct);
 
         _logger.LogWarning("Admin {Admin} deleted tag {Slug}", admin, tag.Slug);
+        await _activity.RecordAsync(admin, Activity.DeletedTopic, tag.Name, ct);
     }
 
     private static TopPostDto ToDto(TopPost p) => new(p.Id, p.Title, p.Slug, p.Views, p.Claps, p.Comments);

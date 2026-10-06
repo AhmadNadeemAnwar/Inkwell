@@ -1,3 +1,4 @@
+using Inkwell.Application.Admin;
 using Inkwell.Application.Common;
 using Inkwell.Application.Portfolio;
 using Inkwell.Infrastructure.Portfolio;
@@ -41,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminRepository, AdminRepository>();
         services.AddScoped<IImageRepository, ImageRepository>();
         services.AddScoped<IReactionRepository, ReactionRepository>();
+        services.AddScoped<IActivityLog, ActivityLog>();
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();

@@ -1,6 +1,7 @@
 import type {
-  AdminComment, AdminPost, AdminTag, Collection, Frontmatter, Paged, PortfolioEntry, PortfolioStatus,
-  PortfolioSummary, PostDraft, PostInput, PostStatus, PostTag, Session, Stats, StoredImage,
+  ActivityEntry, AdminComment, AdminPost, AdminTag, Collection, Frontmatter, Paged, PortfolioEntry, PortfolioStatus,
+  PortfolioSummary, PostDraft, PostInput, PostRevision, PostRevisionDetail, PostStatus, PostTag, Profile, ProfileInput,
+  Session, Stats, StoredImage,
 } from './types'
 
 // Empty in development (Vite proxies /api); the production build bakes in the API's absolute URL.
@@ -123,6 +124,14 @@ export const api = {
 
   stats: () => request<Stats>('GET', '/api/v1/admin/stats'),
 
+  activity: (pageNumber = 1) => request<Paged<ActivityEntry>>('GET', `/api/v1/admin/activity${query({ pageNumber, pageSize: 50 })}`),
+
+  /** Every post as one object, for saving to a file. */
+  exportPosts: () => request<{ postCount: number }>('GET', '/api/v1/admin/export'),
+
+  profile: () => request<Profile>('GET', '/api/v1/auth/me'),
+  updateProfile: (body: ProfileInput) => request<Profile>('PUT', '/api/v1/users/me', body),
+
   posts: (params: { status?: string; q?: string; pageNumber?: number; pageSize?: number }) =>
     request<Paged<AdminPost>>('GET', `/api/v1/admin/posts${query(params)}`),
   /** Any post, whoever wrote it. */
@@ -133,12 +142,13 @@ export const api = {
   postForEdit: (id: string) => request<PostDraft>('GET', `/api/v1/posts/${id}/edit`),
   createPost: (body: PostInput) => request<PostDraft>('POST', '/api/v1/posts', body),
   updatePost: (id: string, body: PostInput) => request<PostDraft>('PUT', `/api/v1/posts/${id}`, body),
-  setPostStatus: (id: string, status: PostStatus) => request<PostDraft>('POST', `/api/v1/posts/${id}/status`, { status }),
   uploadImage: (file: Blob, name: string) => {
     const form = new FormData()
     form.append('file', file, name)
     return request<StoredImage>('POST', '/api/v1/images', form)
   },
+  revisions: (id: string) => request<PostRevision[]>('GET', `/api/v1/posts/${id}/revisions`),
+  revision: (id: string, revisionId: string) => request<PostRevisionDetail>('GET', `/api/v1/posts/${id}/revisions/${revisionId}`),
   suggestTags: (q: string) => request<PostTag[]>('GET', `/api/v1/tags/suggest${query({ q })}`),
 
   comments: (pageNumber = 1) => request<Paged<AdminComment>>('GET', `/api/v1/admin/comments${query({ pageNumber, pageSize: 25 })}`),

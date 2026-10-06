@@ -27,6 +27,7 @@ public sealed class AdminAuthService : IAdminAuthService
     private readonly ITotpVerifier _totp;
     private readonly IAdminLoginAttemptTracker _attempts;
     private readonly ILogger<AdminAuthService> _logger;
+    private readonly IActivityLog _activity;
 
     public AdminAuthService(
         IUserRepository users,
@@ -34,8 +35,10 @@ public sealed class AdminAuthService : IAdminAuthService
         IAdminDirectory admins,
         ITotpVerifier totp,
         IAdminLoginAttemptTracker attempts,
-        ILogger<AdminAuthService> logger)
+        ILogger<AdminAuthService> logger,
+        IActivityLog? activity = null)
     {
+        _activity = activity ?? NoActivityLog.Instance;
         _users = users;
         _tokens = tokens;
         _admins = admins;
@@ -69,6 +72,9 @@ public sealed class AdminAuthService : IAdminAuthService
         {
             _attempts.RecordFailure(lockKey);
             _logger.LogWarning("Failed admin sign-in for {Email}", email);
+            // Only attempts on a real admin address are worth showing; guesses at other addresses are
+            // noise, and recording them would let a stranger fill the history. The lockout bounds these.
+            if (isAdmin) await _activity.RecordAsync(email, Activity.FailedSignIn, ct: ct);
             throw new DomainException(Failure);
         }
 
@@ -77,6 +83,7 @@ public sealed class AdminAuthService : IAdminAuthService
 
         var token = _tokens.CreateAdminSession(user!);
         _logger.LogInformation("Admin {Email} signed in", email);
+        await _activity.RecordAsync(email, Activity.SignedIn, ct: ct);
         return new AdminSessionDto(token.Token, token.ExpiresAt, user!.Email, user.DisplayName);
     }
 }

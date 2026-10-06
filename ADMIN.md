@@ -151,6 +151,16 @@ editor or in the Posts list.
 | Published | Everyone. The first publish fixes its address for good. |
 | Not active | Only you. Switched off; it keeps its address, so publishing again restores the same link. |
 
+**Reader numbers:** readers have no accounts, so the site tells them apart by a random id each
+browser makes up for itself. Only a scrambled form of it is stored, and it is not tied to a person.
+- **Claps** and **Insightful** count readers, not clicks: one of each per reader per post, and a
+  second click takes it back.
+- **Views** count one per reader per post per day. They are reported by the reader's browser once
+  the post is on screen, so refreshes, search-engine crawlers and link previews are left out.
+- These are honest but not tamper-proof: someone who clears their browser's site data counts as a
+  new reader. Each address is limited to 30 reactions a minute.
+- Comments are no longer shown on the public site. Existing ones remain in the Comments section.
+
 **Image storage allowance:** the free database holds 0.5 GB in total. Images are capped at 300 MB
 together, about 1,500 pictures at a typical 200 KB each. When the cap is reached, uploads are
 refused with a clear message; nothing is charged and nothing already stored is affected.

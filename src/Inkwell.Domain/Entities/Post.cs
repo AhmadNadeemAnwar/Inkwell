@@ -35,6 +35,7 @@ public class Post : BaseEntity
     public int ReadingTimeMinutes { get; private set; } = 1;
 
     public int ClapCount { get; private set; }
+    public int InsightfulCount { get; private set; }
     public int CommentCount { get; private set; }
     public int ViewCount { get; private set; }
 
@@ -109,13 +110,19 @@ public class Post : BaseEntity
         if (AuthorId != userId) throw new ForbiddenException("You can only modify your own posts.");
     }
 
-    public void AddClaps(int amount)
+    /// <summary>One visitor gave this reaction. The totals are kept here so lists never have to count rows.</summary>
+    public void AddReaction(ReactionKind kind)
     {
-        if (amount <= 0) throw new DomainException("Clap amount must be positive.");
-        ClapCount += amount;
+        if (kind == ReactionKind.Clap) ClapCount++;
+        else InsightfulCount++;
     }
 
-    public void RemoveClaps(int amount) => ClapCount = Math.Max(0, ClapCount - amount);
+    /// <summary>One visitor took their reaction back. A total never goes below zero.</summary>
+    public void RemoveReaction(ReactionKind kind)
+    {
+        if (kind == ReactionKind.Clap) ClapCount = Math.Max(0, ClapCount - 1);
+        else InsightfulCount = Math.Max(0, InsightfulCount - 1);
+    }
 
     public void IncrementCommentCount() => CommentCount++;
     public void DecrementCommentCount() => CommentCount = Math.Max(0, CommentCount - 1);

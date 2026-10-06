@@ -22,8 +22,9 @@ export function DashboardPage() {
           <section className="tiles" aria-label="Totals">
             <StatTile label="Published posts" value={formatNumber(stats.data.publishedPosts)} />
             <StatTile label="Drafts" value={formatNumber(stats.data.draftPosts)} hint={stats.data.inactivePosts ? `${stats.data.inactivePosts} not active` : undefined} />
-            <StatTile label="Views" value={formatNumber(stats.data.views)} />
-            <StatTile label="Claps" value={formatNumber(stats.data.claps)} />
+            <StatTile label="Views" value={formatNumber(stats.data.views)} hint="one per reader per day" />
+            <StatTile label="Claps" value={formatNumber(stats.data.claps)} hint="one per reader" />
+            <StatTile label="Insightful" value={formatNumber(stats.data.insightful)} hint="one per reader" />
             <StatTile label="Comments" value={formatNumber(stats.data.comments)} />
             <StatTile label="Saves" value={formatNumber(stats.data.bookmarks)} />
             <StatTile label="Topics" value={formatNumber(stats.data.tags)} />

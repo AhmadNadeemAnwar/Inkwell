@@ -58,6 +58,24 @@ public class PostgresTranslationTests : IDisposable
         });
 
     [Fact]
+    public Task Reaction_lookups_translate() =>
+        AssertTranslatesAsync(async () =>
+        {
+            var reactions = new ReactionRepository(_db);
+            await reactions.GetKindsAsync(Guid.NewGuid(), "key");
+            await reactions.GetAsync(Guid.NewGuid(), "key", Inkwell.Domain.Enums.ReactionKind.Clap);
+        });
+
+    [Fact]
+    public Task View_dedupe_and_clear_out_translate() =>
+        AssertTranslatesAsync(async () =>
+        {
+            var reactions = new ReactionRepository(_db);
+            await reactions.HasViewAsync(Guid.NewGuid(), "key", 739000);
+            await reactions.DeleteViewsBeforeAsync(739000);
+        });
+
+    [Fact]
     public Task Personal_feed_translates() =>
         AssertTranslatesAsync(() => new PostRepository(_db).GetPersonalFeedAsync(Guid.NewGuid(), 1, 20));
 

@@ -35,6 +35,7 @@ export interface Stats {
   users: number
   comments: number
   claps: number
+  insightful: number
   views: number
   bookmarks: number
   tags: number
@@ -56,6 +57,7 @@ export interface AdminPost {
   updatedAt: string
   views: number
   claps: number
+  insightful: number
   comments: number
   tags: string[]
 }

@@ -24,6 +24,7 @@ export interface PostSummary {
   coverImageUrl: string | null
   readingTimeMinutes: number
   clapCount: number
+  insightfulCount: number
   commentCount: number
   status: PostStatus
   publishedAt: string | null
@@ -32,7 +33,6 @@ export interface PostSummary {
 }
 
 export interface ViewerState {
-  hasClapped: boolean
   hasBookmarked: boolean
   isFollowingAuthor: boolean
   isAuthor: boolean
@@ -43,6 +43,16 @@ export interface PostDetail extends Omit<PostSummary, 'excerpt'> {
   viewCount: number
   updatedAt: string
   viewer: ViewerState | null
+}
+
+export type ReactionKind = 'clap' | 'insightful'
+
+/** A post's reaction totals, and which of them this browser has given. */
+export interface ReactionState {
+  clapCount: number
+  insightfulCount: number
+  clapped: boolean
+  markedInsightful: boolean
 }
 
 export interface Comment {

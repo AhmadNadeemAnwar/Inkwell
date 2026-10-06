@@ -104,13 +104,8 @@ public sealed class PostService : IPostService
 
         if (!post.IsVisibleTo(viewerId)) throw new NotFoundException(nameof(Post), slug);
 
-        // Author previews of their own drafts should not inflate the counter.
-        if (viewerId != post.AuthorId)
-        {
-            post.RegisterView();
-            await _unitOfWork.SaveChangesAsync(ct);
-        }
-
+        // Fetching a post is not counted as a read: crawlers and refreshes fetch too. The reader's
+        // browser reports a view separately, once per visitor per day (see ReactionService).
         return post.ToDetail(await BuildViewerStateAsync(post, viewerId, ct));
     }
 
@@ -213,11 +208,11 @@ public sealed class PostService : IPostService
     {
         if (viewerId is not { } userId) return null;
 
-        var (hasClapped, hasBookmarked) = await _engagement.GetViewerStateAsync(post.Id, userId, ct);
+        var hasBookmarked = await _engagement.HasBookmarkedAsync(post.Id, userId, ct);
         var isFollowing = post.AuthorId != userId
             && await _engagement.GetUserFollowAsync(userId, post.AuthorId, ct) is not null;
 
-        return new ViewerStateDto(hasClapped, hasBookmarked, isFollowing, post.AuthorId == userId);
+        return new ViewerStateDto(hasBookmarked, isFollowing, post.AuthorId == userId);
     }
 
     private async Task<PostDetailDto> LoadDetailAsync(Guid postId, Guid viewerId, CancellationToken ct)

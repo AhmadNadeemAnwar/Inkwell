@@ -23,6 +23,7 @@ public class AdminRepository : IAdminRepository
         var users = await _db.Users.CountAsync(ct);
         var comments = await _db.Comments.CountAsync(c => !c.IsDeleted, ct);
         var claps = await _db.Posts.SumAsync(p => (long)p.ClapCount, ct);
+        var insightful = await _db.Posts.SumAsync(p => (long)p.InsightfulCount, ct);
         var views = await _db.Posts.SumAsync(p => (long)p.ViewCount, ct);
         var bookmarks = await _db.Bookmarks.CountAsync(ct);
         var tags = await _db.Tags.CountAsync(ct);
@@ -49,7 +50,7 @@ public class AdminRepository : IAdminRepository
             .ToListAsync(ct);
 
         return new AdminStats(
-            published, drafts, inactive, users, comments, claps, views, bookmarks, tags,
+            published, drafts, inactive, users, comments, claps, insightful, views, bookmarks, tags,
             topByViews, topByClaps,
             recent.Where(d => d.HasValue).Select(d => d!.Value).ToList());
     }

@@ -17,19 +17,25 @@ public class PostsController : ControllerBase
     private readonly IPostService _posts;
     private readonly ICommentService _comments;
     private readonly IEngagementService _engagement;
+    private readonly IReactionService _reactions;
     private readonly ICurrentUser _currentUser;
 
     public PostsController(
         IPostService posts,
         ICommentService comments,
         IEngagementService engagement,
+        IReactionService reactions,
         ICurrentUser currentUser)
     {
         _posts = posts;
         _comments = comments;
         _engagement = engagement;
+        _reactions = reactions;
         _currentUser = currentUser;
     }
+
+    /// <summary>The random id a reader's browser made up for itself. Readers have no accounts, so this is all that tells two of them apart.</summary>
+    private string? VisitorId => Request.Headers["X-Visitor-Id"].ToString();
 
     /// <summary>
     /// Browse and search published posts. Supports free text (<c>q</c>), tag, author,
@@ -133,10 +139,27 @@ public class PostsController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{id:guid}/claps")]
-    [Authorize]
-    public async Task<ActionResult<ClapResult>> Clap(Guid id, [FromQuery] int amount = 1, CancellationToken ct = default) =>
-        Ok(await _engagement.ClapAsync(id, _currentUser.RequireUserId(), Math.Clamp(amount, 1, 10), ct));
+    /// <summary>A post's reaction totals, and which ones this visitor has given. No account needed.</summary>
+    [HttpGet("{id:guid}/reactions")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ReactionState>> Reactions(Guid id, CancellationToken ct) =>
+        Ok(await _reactions.GetAsync(id, VisitorId, ct));
+
+    /// <summary>Gives a reaction (clap or insightful), or takes it back if this visitor already gave it.</summary>
+    [HttpPost("{id:guid}/reactions/{kind}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ReactionState>> ToggleReaction(Guid id, string kind, CancellationToken ct) =>
+        Ok(await _reactions.ToggleAsync(id, VisitorId, kind, ct));
+
+    /// <summary>Reported by a reader's browser once a post is on screen. Counted at most once per visitor per day.</summary>
+    [HttpPost("{id:guid}/view")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RecordView(Guid id, CancellationToken ct)
+    {
+        await _reactions.RecordViewAsync(id, VisitorId, Request.Headers.UserAgent.ToString(), _currentUser.UserId, ct);
+        return NoContent();
+    }
 
     [HttpPost("{id:guid}/bookmark")]
     [Authorize]

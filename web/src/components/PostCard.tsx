@@ -3,8 +3,7 @@ import type { PostSummary } from '../api/types'
 import { Avatar, TagPill, formatDate } from './ui'
 
 export function PostCard({ post }: { post: PostSummary }) {
-  // Drafts have no slug yet, so they link into the editor rather than the reading view.
-  const href = post.slug ? `/p/${post.slug}` : `/write/${post.id}`
+  const href = `/p/${post.slug}`
 
   return (
     <article className="post-card">
@@ -22,8 +21,8 @@ export function PostCard({ post }: { post: PostSummary }) {
 
       <div className="post-card__meta">
         <span>{post.readingTimeMinutes} min read</span>
-        {post.clapCount > 0 && <span>· {post.clapCount} claps</span>}
-        {post.commentCount > 0 && <span>· {post.commentCount} comments</span>}
+        {post.clapCount > 0 && <span>· {post.clapCount} {post.clapCount === 1 ? 'clap' : 'claps'}</span>}
+        {post.insightfulCount > 0 && <span>· {post.insightfulCount} found it insightful</span>}
         {post.tags.length > 0 && (
           <span className="pill-row" style={{ marginLeft: 'auto' }}>
             {post.tags.slice(0, 2).map((tag) => <TagPill key={tag.id} tag={tag} />)}

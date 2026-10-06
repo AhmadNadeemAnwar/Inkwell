@@ -12,6 +12,7 @@ public sealed record AdminStats(
     int Users,
     int Comments,
     long Claps,
+    long Insightful,
     long Views,
     int Bookmarks,
     int Tags,

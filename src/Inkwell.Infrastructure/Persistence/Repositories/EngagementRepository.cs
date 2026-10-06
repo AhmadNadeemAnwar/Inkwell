@@ -10,12 +10,6 @@ public class EngagementRepository : IEngagementRepository
 
     public EngagementRepository(AppDbContext db) => _db = db;
 
-    public async Task<Clap?> GetClapAsync(Guid postId, Guid userId, CancellationToken ct = default) =>
-        await _db.Claps.FirstOrDefaultAsync(c => c.PostId == postId && c.UserId == userId, ct);
-
-    public async Task AddClapAsync(Clap clap, CancellationToken ct = default) =>
-        await _db.Claps.AddAsync(clap, ct);
-
     public async Task<Bookmark?> GetBookmarkAsync(Guid postId, Guid userId, CancellationToken ct = default) =>
         await _db.Bookmarks.FirstOrDefaultAsync(b => b.PostId == postId && b.UserId == userId, ct);
 
@@ -40,10 +34,6 @@ public class EngagementRepository : IEngagementRepository
 
     public void RemoveTagFollow(TagFollow follow) => _db.TagFollows.Remove(follow);
 
-    public async Task<(bool HasClapped, bool HasBookmarked)> GetViewerStateAsync(Guid postId, Guid userId, CancellationToken ct = default)
-    {
-        var hasClapped = await _db.Claps.AnyAsync(c => c.PostId == postId && c.UserId == userId, ct);
-        var hasBookmarked = await _db.Bookmarks.AnyAsync(b => b.PostId == postId && b.UserId == userId, ct);
-        return (hasClapped, hasBookmarked);
-    }
+    public Task<bool> HasBookmarkedAsync(Guid postId, Guid userId, CancellationToken ct = default) =>
+        _db.Bookmarks.AnyAsync(b => b.PostId == postId && b.UserId == userId, ct);
 }

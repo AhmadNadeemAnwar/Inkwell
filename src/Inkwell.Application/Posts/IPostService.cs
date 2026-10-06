@@ -15,7 +15,7 @@ public interface IPostService
     Task<PostDetailDto> SetStatusAsync(Guid id, string status, Guid authorId, CancellationToken ct = default);
     Task DeleteAsync(Guid id, Guid authorId, CancellationToken ct = default);
 
-    /// <summary>Public read by canonical slug. Increments the view counter.</summary>
+    /// <summary>Public read by canonical slug. Does not count as a view; the reader's browser reports that separately.</summary>
     Task<PostDetailDto> GetBySlugAsync(string slug, Guid? viewerId, CancellationToken ct = default);
 
     /// <summary>Loads a post by id for its author, including drafts.</summary>

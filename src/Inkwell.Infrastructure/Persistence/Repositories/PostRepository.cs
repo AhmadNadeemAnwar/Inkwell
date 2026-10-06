@@ -155,13 +155,13 @@ public class PostRepository : IPostRepository
     private static IQueryable<Post> ApplySort(IQueryable<Post> posts, PostSort sort, string? searchTerm) => sort switch
     {
         PostSort.Popular => posts
-            .OrderByDescending(p => p.ClapCount + (p.CommentCount * 2))
+            .OrderByDescending(p => p.ClapCount + (p.InsightfulCount * 2))
             .ThenByDescending(p => p.PublishedAt),
 
         // Recency-gated popularity: cheap to run and good enough to keep the front page moving.
         PostSort.Trending => posts
             .Where(p => p.PublishedAt >= DateTimeOffset.UtcNow - TrendingWindow)
-            .OrderByDescending(p => (p.ClapCount * 3) + (p.CommentCount * 5) + p.ViewCount)
+            .OrderByDescending(p => (p.ClapCount * 3) + (p.InsightfulCount * 5) + p.ViewCount)
             .ThenByDescending(p => p.PublishedAt),
 
         // On a text search, title hits outrank body hits before falling back to recency.

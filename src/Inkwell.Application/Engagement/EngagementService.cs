@@ -4,12 +4,10 @@ using Inkwell.Domain.Interfaces;
 
 namespace Inkwell.Application.Engagement;
 
-public sealed record ClapResult(int PostClapCount, int YourClapCount);
 public sealed record ToggleResult(bool IsActive);
 
 public interface IEngagementService
 {
-    Task<ClapResult> ClapAsync(Guid postId, Guid userId, int amount, CancellationToken ct = default);
     Task<ToggleResult> ToggleBookmarkAsync(Guid postId, Guid userId, CancellationToken ct = default);
     Task<ToggleResult> ToggleFollowUserAsync(string handle, Guid followerId, CancellationToken ct = default);
     Task<ToggleResult> ToggleFollowTagAsync(string tagSlug, Guid userId, CancellationToken ct = default);
@@ -35,33 +33,6 @@ public sealed class EngagementService : IEngagementService
         _users = users;
         _tags = tags;
         _unitOfWork = unitOfWork;
-    }
-
-    public async Task<ClapResult> ClapAsync(Guid postId, Guid userId, int amount, CancellationToken ct = default)
-    {
-        if (amount <= 0) throw new DomainException("Clap amount must be positive.");
-
-        var post = await _posts.GetByIdAsync(postId, ct) ?? throw new NotFoundException(nameof(Post), postId);
-        if (!post.IsVisibleTo(userId)) throw new NotFoundException(nameof(Post), postId);
-
-        var clap = await _engagement.GetClapAsync(postId, userId, ct);
-
-        if (clap is null)
-        {
-            clap = new Clap(postId, userId, amount);
-            await _engagement.AddClapAsync(clap, ct);
-            post.AddClaps(clap.Count);
-        }
-        else
-        {
-            // Add() clamps at the per-user ceiling and reports what was actually applied,
-            // so the post total never drifts from the sum of its claps.
-            var applied = clap.Add(amount);
-            if (applied > 0) post.AddClaps(applied);
-        }
-
-        await _unitOfWork.SaveChangesAsync(ct);
-        return new ClapResult(post.ClapCount, clap.Count);
     }
 
     public async Task<ToggleResult> ToggleBookmarkAsync(Guid postId, Guid userId, CancellationToken ct = default)

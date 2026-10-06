@@ -102,7 +102,7 @@ export function PostsPage() {
               <thead>
                 <tr>
                   <th>Title</th><th>Author</th><th>Status</th><th>Published</th>
-                  <th className="num">Views</th><th className="num">Claps</th><th className="num">Replies</th><th></th>
+                  <th className="num">Views</th><th className="num">Claps</th><th className="num">Insightful</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -124,7 +124,7 @@ export function PostsPage() {
                       <td>{formatDate(post.publishedAt)}</td>
                       <td className="num">{formatNumber(post.views)}</td>
                       <td className="num">{formatNumber(post.claps)}</td>
-                      <td className="num">{formatNumber(post.comments)}</td>
+                      <td className="num">{formatNumber(post.insightful)}</td>
                       <td className="actions">
                         {post.authorHandle === myHandle && <Link className="btn btn--small" to={`/posts/${post.id}/edit`}>Edit</Link>}
                         <button className="btn btn--small btn--danger" onClick={() => remove(post)} disabled={busyId === post.id}>Delete</button>

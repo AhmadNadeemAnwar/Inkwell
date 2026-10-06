@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
-import type { PostDetail } from '../api/types'
-import { CommentThread } from '../components/CommentThread'
+import type { PostDetail, ReactionKind, ReactionState } from '../api/types'
 import { CopyLinkButton } from '../components/CopyLinkButton'
 import { PostCard } from '../components/PostCard'
 import { RichText } from '../components/RichText'
@@ -23,10 +22,22 @@ export function PostPage() {
 
   useEffect(() => setLocal(post.data), [post.data])
 
-  const comments = useAsync(
-    () => (local ? api.comments(local.id) : Promise.resolve([])),
-    [local?.id],
-  )
+  // Totals come with the post; which ones this browser gave is asked for separately, so the post
+  // itself is the same for every reader.
+  const [reactions, setReactions] = useState<ReactionState | null>(null)
+  const [reacting, setReacting] = useState<ReactionKind | null>(null)
+  const [reactionError, setReactionError] = useState<string | null>(null)
+
+  const postId = local?.id
+  useEffect(() => {
+    if (!postId) return
+    let cancelled = false
+    setReactions(null)
+    api.reactions(postId).then((state) => { if (!cancelled) setReactions(state) }).catch(() => { /* The totals from the post are shown instead. */ })
+    // Not awaited and never shown: counting a reader must not get in the way of reading.
+    api.recordView(postId).catch(() => {})
+    return () => { cancelled = true }
+  }, [postId])
 
   const related = useAsync(
     () => (local ? api.related(local.id) : Promise.resolve([])),
@@ -46,10 +57,18 @@ export function PostPage() {
   }
   if (!local) return null
 
-  async function clap() {
-    if (!user) return navigate('/login')
-    const result = await api.clap(local!.id)
-    setLocal((prev) => (prev ? { ...prev, clapCount: result.postClapCount } : prev))
+  async function react(kind: ReactionKind) {
+    // One at a time: a second click before the first answer would otherwise undo it at once.
+    if (reacting) return
+    setReacting(kind)
+    setReactionError(null)
+    try {
+      setReactions(await api.toggleReaction(local!.id, kind))
+    } catch (err) {
+      setReactionError(err instanceof Error ? err.message : 'Your reaction could not be saved.')
+    } finally {
+      setReacting(null)
+    }
   }
 
   async function toggleBookmark() {
@@ -104,14 +123,14 @@ export function PostPage() {
         )}
 
         <div className="actionbar">
-          {canEngage ? (
-            <button className={`btn${viewer?.hasClapped ? ' btn--active' : ''}`} onClick={clap} aria-label="Clap for this post">
-              👏 {local.clapCount}
-            </button>
-          ) : (
-            <span className="faint" aria-label={`${local.clapCount} claps`}>👏 {local.clapCount}</span>
-          )}
-          <span className="faint" style={{ fontSize: '0.85rem' }}>{local.commentCount} responses</span>
+          <button className={`btn${reactions?.clapped ? ' btn--active' : ''}`} onClick={() => react('clap')} disabled={reacting !== null}
+            aria-pressed={reactions?.clapped ?? false} title={reactions?.clapped ? 'Take back your clap' : 'Clap for this post'}>
+            <span aria-hidden="true">👏</span> Clap <span className="reaction__count">{reactions?.clapCount ?? local.clapCount}</span>
+          </button>
+          <button className={`btn${reactions?.markedInsightful ? ' btn--active' : ''}`} onClick={() => react('insightful')} disabled={reacting !== null}
+            aria-pressed={reactions?.markedInsightful ?? false} title={reactions?.markedInsightful ? 'Take back your mark' : 'Mark this post as insightful'}>
+            <span aria-hidden="true">💡</span> Insightful <span className="reaction__count">{reactions?.insightfulCount ?? local.insightfulCount}</span>
+          </button>
           <span className="actionbar__spacer" />
           <CopyLinkButton url={`${window.location.origin}/p/${local.slug}`} />
           {canEngage && (
@@ -122,15 +141,7 @@ export function PostPage() {
         </div>
       </article>
 
-      {comments.error && <ErrorNote message={comments.error} />}
-      <CommentThread
-        postId={local.id}
-        comments={comments.data ?? []}
-        onChanged={() => {
-          comments.reload()
-          post.reload()
-        }}
-      />
+      {reactionError && <ErrorNote message={reactionError} />}
 
       {related.data && related.data.length > 0 && (
         <section style={{ marginTop: '3rem' }}>

@@ -14,7 +14,8 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<PostTag> PostTags => Set<PostTag>();
     public DbSet<Comment> Comments => Set<Comment>();
-    public DbSet<Clap> Claps => Set<Clap>();
+    public DbSet<Reaction> Reactions => Set<Reaction>();
+    public DbSet<PostView> PostViews => Set<PostView>();
     public DbSet<Bookmark> Bookmarks => Set<Bookmark>();
     public DbSet<UserFollow> UserFollows => Set<UserFollow>();
     public DbSet<TagFollow> TagFollows => Set<TagFollow>();

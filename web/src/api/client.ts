@@ -1,5 +1,6 @@
+import { getVisitorId } from '../lib/visitor'
 import type {
-  AuthResponse, Comment, CurrentUser, Paged, PostDetail, PostSort, PostSummary, Profile, Tag,
+  AuthResponse, CurrentUser, Paged, PostDetail, PostSort, PostSummary, Profile, ReactionKind, ReactionState, Tag,
 } from './types'
 
 const TOKEN_KEY = 'inkwell.token'
@@ -29,7 +30,11 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+/**
+ * @param asVisitor Sends this browser's random visitor id. Only reactions and view counting need
+ * it, so it is left off everything else and ordinary reads stay identical for every reader.
+ */
+async function request<T>(method: string, path: string, body?: unknown, asVisitor = false): Promise<T> {
   const token = getToken()
 
   const response = await fetch(`${API_BASE}${path}`, {
@@ -37,6 +42,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     headers: {
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(asVisitor ? { 'X-Visitor-Id': getVisitorId() } : {}),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
@@ -103,18 +109,18 @@ export const api = {
     request<PostSummary[]>('GET', `/api/v1/posts/${id}/related${query({ limit })}`),
 
 
-  clap: (id: string, amount = 1) =>
-    request<{ postClapCount: number; yourClapCount: number }>('POST', `/api/v1/posts/${id}/claps${query({ amount })}`),
+  reactions: (id: string) => request<ReactionState>('GET', `/api/v1/posts/${id}/reactions`, undefined, true),
+
+  /** Gives the reaction, or takes it back if this browser already gave it. */
+  toggleReaction: (id: string, kind: ReactionKind) =>
+    request<ReactionState>('POST', `/api/v1/posts/${id}/reactions/${kind}`, undefined, true),
+
+  /** Tells the API a reader has this post open. Counted at most once per browser per day. */
+  recordView: (id: string) => request<void>('POST', `/api/v1/posts/${id}/view`, undefined, true),
 
   toggleBookmark: (id: string) =>
     request<{ isActive: boolean }>('POST', `/api/v1/posts/${id}/bookmark`),
 
-  comments: (id: string) => request<Comment[]>('GET', `/api/v1/posts/${id}/comments`),
-
-  addComment: (id: string, body: { body: string; parentId: string | null }) =>
-    request<Comment>('POST', `/api/v1/posts/${id}/comments`, body),
-
-  deleteComment: (id: string) => request<void>('DELETE', `/api/v1/comments/${id}`),
 
   profile: (handle: string) => request<Profile>('GET', `/api/v1/users/${encodeURIComponent(handle)}`),
 

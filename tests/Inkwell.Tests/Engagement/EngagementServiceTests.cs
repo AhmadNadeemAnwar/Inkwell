@@ -31,47 +31,6 @@ public class EngagementServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Repeated_claps_from_one_reader_accumulate_on_a_single_row()
-    {
-        var (postId, _) = await PublishedPostAsync();
-        var reader = await _fixture.AddUserAsync("reader");
-
-        await _engagement.ClapAsync(postId, reader.Id, 3);
-        var result = await _engagement.ClapAsync(postId, reader.Id, 4);
-
-        result.YourClapCount.Should().Be(7);
-        result.PostClapCount.Should().Be(7);
-        _fixture.Db.Claps.Count(c => c.PostId == postId).Should().Be(1);
-    }
-
-    [Fact]
-    public async Task The_post_total_never_exceeds_the_sum_of_capped_per_reader_claps()
-    {
-        var (postId, _) = await PublishedPostAsync();
-        var reader = await _fixture.AddUserAsync("reader");
-
-        await _engagement.ClapAsync(postId, reader.Id, Clap.MaxPerUser);
-        var result = await _engagement.ClapAsync(postId, reader.Id, 25);
-
-        result.YourClapCount.Should().Be(Clap.MaxPerUser);
-        result.PostClapCount.Should().Be(Clap.MaxPerUser);
-    }
-
-    [Fact]
-    public async Task Claps_from_different_readers_are_counted_separately()
-    {
-        var (postId, _) = await PublishedPostAsync();
-        var first = await _fixture.AddUserAsync("first");
-        var second = await _fixture.AddUserAsync("second");
-
-        await _engagement.ClapAsync(postId, first.Id, 2);
-        var result = await _engagement.ClapAsync(postId, second.Id, 3);
-
-        result.YourClapCount.Should().Be(3);
-        result.PostClapCount.Should().Be(5);
-    }
-
-    [Fact]
     public async Task Bookmarking_toggles_on_and_off()
     {
         var (postId, _) = await PublishedPostAsync();

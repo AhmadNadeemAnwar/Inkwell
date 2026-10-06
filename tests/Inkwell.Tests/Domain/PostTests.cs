@@ -121,6 +121,22 @@ public class PostTests
     }
 
     [Fact]
+    public void Reaction_totals_go_up_and_down_by_one_and_never_below_zero()
+    {
+        var post = NewPost();
+
+        post.AddReaction(ReactionKind.Clap);
+        post.AddReaction(ReactionKind.Clap);
+        post.AddReaction(ReactionKind.Insightful);
+        (post.ClapCount, post.InsightfulCount).Should().Be((2, 1));
+
+        post.RemoveReaction(ReactionKind.Clap);
+        post.RemoveReaction(ReactionKind.Insightful);
+        post.RemoveReaction(ReactionKind.Insightful);
+        (post.ClapCount, post.InsightfulCount).Should().Be((1, 0));
+    }
+
+    [Fact]
     public void Publishing_twice_is_rejected()
     {
         var post = NewPost();

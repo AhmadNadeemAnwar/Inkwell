@@ -74,7 +74,7 @@ public sealed class AdminService : IAdminService
 
         return new AdminStatsDto(
             stats.PublishedPosts, stats.DraftPosts, stats.InactivePosts, stats.Users, stats.Comments,
-            stats.Claps, stats.Views, stats.Bookmarks, stats.Tags,
+            stats.Claps, stats.Insightful, stats.Views, stats.Bookmarks, stats.Tags,
             stats.TopByViews.Select(ToDto).ToList(),
             stats.TopByClaps.Select(ToDto).ToList(),
             series);
@@ -87,7 +87,7 @@ public sealed class AdminService : IAdminService
         var page = await _admin.SearchPostsAsync(parsed, search, pageNumber, pageSize, ct);
         return page.Map(p => new AdminPostDto(
             p.Id, p.Title, p.Slug, p.Status.ToString(), p.Author.Handle, p.Author.DisplayName,
-            p.PublishedAt, p.UpdatedAt, p.ViewCount, p.ClapCount, p.CommentCount,
+            p.PublishedAt, p.UpdatedAt, p.ViewCount, p.ClapCount, p.InsightfulCount, p.CommentCount,
             p.PostTags.Select(pt => pt.Tag.Name).OrderBy(n => n).ToList()));
     }
 

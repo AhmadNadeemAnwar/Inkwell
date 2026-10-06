@@ -35,27 +35,6 @@ namespace Inkwell.Infrastructure.Persistence.Migrations
                     b.ToTable("bookmarks", (string)null);
                 });
 
-            modelBuilder.Entity("Inkwell.Domain.Entities.Clap", b =>
-                {
-                    b.Property<Guid>("PostId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Count")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<long>("CreatedAt")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("PostId", "UserId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("claps", (string)null);
-                });
-
             modelBuilder.Entity("Inkwell.Domain.Entities.Comment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -120,6 +99,9 @@ namespace Inkwell.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("InsightfulCount")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("PlainText")
@@ -210,6 +192,45 @@ namespace Inkwell.Infrastructure.Persistence.Migrations
                     b.HasIndex("TagId");
 
                     b.ToTable("post_tags", (string)null);
+                });
+
+            modelBuilder.Entity("Inkwell.Domain.Entities.PostView", b =>
+                {
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VisitorKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Day")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PostId", "VisitorKey", "Day");
+
+                    b.HasIndex("Day");
+
+                    b.ToTable("post_views", (string)null);
+                });
+
+            modelBuilder.Entity("Inkwell.Domain.Entities.Reaction", b =>
+                {
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VisitorKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PostId", "VisitorKey", "Kind");
+
+                    b.ToTable("reactions", (string)null);
                 });
 
             modelBuilder.Entity("Inkwell.Domain.Entities.StoredImage", b =>
@@ -391,25 +412,6 @@ namespace Inkwell.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Inkwell.Domain.Entities.Clap", b =>
-                {
-                    b.HasOne("Inkwell.Domain.Entities.Post", "Post")
-                        .WithMany()
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Inkwell.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Post");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Inkwell.Domain.Entities.Comment", b =>
                 {
                     b.HasOne("Inkwell.Domain.Entities.User", "Author")
@@ -475,6 +477,26 @@ namespace Inkwell.Infrastructure.Persistence.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("Inkwell.Domain.Entities.PostView", b =>
+                {
+                    b.HasOne("Inkwell.Domain.Entities.Post", null)
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Inkwell.Domain.Entities.Reaction", b =>
+                {
+                    b.HasOne("Inkwell.Domain.Entities.Post", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
                 });
 
             modelBuilder.Entity("Inkwell.Domain.Entities.TagFollow", b =>

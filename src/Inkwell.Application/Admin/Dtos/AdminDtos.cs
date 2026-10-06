@@ -15,6 +15,7 @@ public sealed record AdminStatsDto(
     int Users,
     int Comments,
     long Claps,
+    long Insightful,
     long Views,
     int Bookmarks,
     int Tags,
@@ -33,6 +34,7 @@ public sealed record AdminPostDto(
     DateTimeOffset UpdatedAt,
     int Views,
     int Claps,
+    int Insightful,
     int Comments,
     IReadOnlyList<string> Tags);
 

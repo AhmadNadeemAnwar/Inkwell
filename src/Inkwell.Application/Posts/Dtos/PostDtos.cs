@@ -25,14 +25,15 @@ public sealed record PostSummaryDto(
     string? CoverImageUrl,
     int ReadingTimeMinutes,
     int ClapCount,
+    int InsightfulCount,
     int CommentCount,
     string Status,
     DateTimeOffset? PublishedAt,
     AuthorSummaryDto Author,
     IReadOnlyList<TagDto> Tags);
 
-/// <summary>Per-viewer engagement flags, null for anonymous readers.</summary>
-public sealed record ViewerStateDto(bool HasClapped, bool HasBookmarked, bool IsFollowingAuthor, bool IsAuthor);
+/// <summary>Flags for a signed-in account, null for visitors. A visitor's reactions come from the reactions route instead.</summary>
+public sealed record ViewerStateDto(bool HasBookmarked, bool IsFollowingAuthor, bool IsAuthor);
 
 public sealed record PostDetailDto(
     Guid Id,
@@ -43,6 +44,7 @@ public sealed record PostDetailDto(
     string? CoverImageUrl,
     int ReadingTimeMinutes,
     int ClapCount,
+    int InsightfulCount,
     int CommentCount,
     int ViewCount,
     string Status,

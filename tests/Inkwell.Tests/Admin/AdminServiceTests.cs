@@ -7,6 +7,7 @@ using Inkwell.Application.Posts;
 using Inkwell.Application.Posts.Dtos;
 using Inkwell.Domain.Entities;
 using Inkwell.Domain.Exceptions;
+using Inkwell.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -20,6 +21,7 @@ public class AdminServiceTests : IDisposable
     private readonly PostService _posts;
     private readonly CommentService _comments;
     private readonly EngagementService _engagement;
+    private readonly ReactionService _reactions;
     private readonly AdminService _admin;
 
     public AdminServiceTests()
@@ -27,6 +29,7 @@ public class AdminServiceTests : IDisposable
         _posts = new PostService(_fixture.Posts, _fixture.Tags, _fixture.Engagement, _fixture.Db);
         _comments = new CommentService(_fixture.Comments, _fixture.Posts, _fixture.Db);
         _engagement = new EngagementService(_fixture.Engagement, _fixture.Posts, _fixture.Users, _fixture.Tags, _fixture.Db);
+        _reactions = new ReactionService(new ReactionRepository(_fixture.Db), _fixture.Posts, _clock);
         _admin = new AdminService(_fixture.Admin, _fixture.Posts, _fixture.Comments, _fixture.Db, NullLogger<AdminService>.Instance, _clock);
     }
 
@@ -55,7 +58,8 @@ public class AdminServiceTests : IDisposable
         await PublishedAsync(bob.Id, "Second", "news", "tech");
         await DraftAsync(ada.Id, "Unfinished");
 
-        await _engagement.ClapAsync(first, bob.Id, 7);
+        for (var i = 0; i < 7; i++) await _reactions.ToggleAsync(first, Guid.NewGuid().ToString(), "clap");
+        for (var i = 0; i < 3; i++) await _reactions.ToggleAsync(first, Guid.NewGuid().ToString(), "insightful");
         await _engagement.ToggleBookmarkAsync(first, bob.Id);
         await _comments.AddAsync(first, new CreateCommentRequest("Nice", null), bob.Id);
 
@@ -67,6 +71,7 @@ public class AdminServiceTests : IDisposable
         stats.Users.Should().Be(2);
         stats.Comments.Should().Be(1);
         stats.Claps.Should().Be(7);
+        stats.Insightful.Should().Be(3);
         stats.Bookmarks.Should().Be(1);
         stats.Tags.Should().Be(2);
     }
@@ -100,7 +105,7 @@ public class AdminServiceTests : IDisposable
         var loud = await PublishedAsync(ada.Id, "Loud");
         var viewed = await PublishedAsync(ada.Id, "Viewed");
 
-        await _engagement.ClapAsync(loud, reader.Id, 9);
+        for (var i = 0; i < 9; i++) await _reactions.ToggleAsync(loud, Guid.NewGuid().ToString(), "clap");
         var viewedPost = await _fixture.Posts.GetByIdAsync(viewed);
         for (var i = 0; i < 5; i++) viewedPost!.RegisterView();
         await _fixture.Db.SaveChangesAsync();

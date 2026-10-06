@@ -28,16 +28,34 @@ public class CommentConfiguration : IEntityTypeConfiguration<Comment>
     }
 }
 
-public class ClapConfiguration : IEntityTypeConfiguration<Clap>
+public class ReactionConfiguration : IEntityTypeConfiguration<Reaction>
 {
-    public void Configure(EntityTypeBuilder<Clap> builder)
+    public void Configure(EntityTypeBuilder<Reaction> builder)
     {
-        builder.ToTable("claps");
-        // One row per reader per post: the composite key is what stops double-counting.
-        builder.HasKey(c => new { c.PostId, c.UserId });
+        builder.ToTable("reactions");
+        // One row per visitor, post and kind: the key is what makes a second click an undo, not a second count.
+        builder.HasKey(r => new { r.PostId, r.VisitorKey, r.Kind });
 
-        builder.HasOne(c => c.Post).WithMany().HasForeignKey(c => c.PostId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasOne(c => c.User).WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.Property(r => r.VisitorKey).IsRequired().HasMaxLength(Reaction.VisitorKeyLength);
+        builder.Property(r => r.Kind).HasConversion<int>();
+
+        builder.HasOne(r => r.Post).WithMany().HasForeignKey(r => r.PostId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class PostViewConfiguration : IEntityTypeConfiguration<PostView>
+{
+    public void Configure(EntityTypeBuilder<PostView> builder)
+    {
+        builder.ToTable("post_views");
+        builder.HasKey(v => new { v.PostId, v.VisitorKey, v.Day });
+
+        builder.Property(v => v.VisitorKey).IsRequired().HasMaxLength(Reaction.VisitorKeyLength);
+
+        builder.HasOne<Post>().WithMany().HasForeignKey(v => v.PostId).OnDelete(DeleteBehavior.Cascade);
+
+        // Covers the daily clear-out of older rows.
+        builder.HasIndex(v => v.Day);
     }
 }
 

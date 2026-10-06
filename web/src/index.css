@@ -383,3 +383,5 @@ input:focus, textarea:focus, select:focus {
 .prose__references h2 { font-family: var(--font-ui); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 0.8em; }
 .prose__references ol { margin: 0; }
 .prose__references li { overflow-wrap: anywhere; }
+
+.reaction__count { font-variant-numeric: tabular-nums; opacity: 0.75; margin-left: 0.15rem; }

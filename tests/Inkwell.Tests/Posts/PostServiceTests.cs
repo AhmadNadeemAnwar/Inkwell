@@ -271,7 +271,7 @@ public class PostServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Reading_a_post_counts_a_view_for_everyone_except_its_author()
+    public async Task Fetching_a_post_never_counts_as_a_view_whoever_asks()
     {
         var author = await _fixture.AddUserAsync("author");
         var reader = await _fixture.AddUserAsync("reader");
@@ -280,10 +280,11 @@ public class PostServiceTests : IDisposable
         await _service.PublishAsync(draft.Id, author.Id);
 
         await _service.GetBySlugAsync("counting-views", author.Id);
-        (await _fixture.Posts.GetByIdAsync(draft.Id))!.ViewCount.Should().Be(0);
-
         await _service.GetBySlugAsync("counting-views", reader.Id);
-        (await _fixture.Posts.GetByIdAsync(draft.Id))!.ViewCount.Should().Be(1);
+        await _service.GetBySlugAsync("counting-views", null);
+
+        // Views are reported by the reader's browser and de-duplicated; see ReactionServiceTests.
+        (await _fixture.Posts.GetByIdAsync(draft.Id))!.ViewCount.Should().Be(0);
     }
 
     [Fact]

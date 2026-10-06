@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { api } from '../api/client'
-import type { Tag } from '../api/types'
+import type { PostTag } from '../api/types'
 
 const MAX_TAGS = 5
 
@@ -13,7 +13,7 @@ interface Props {
 /** Tag picker with type-ahead against existing topics; unmatched entries create a new tag on save. */
 export function TagInput({ value, onChange }: Props) {
   const [term, setTerm] = useState('')
-  const [suggestions, setSuggestions] = useState<Tag[]>([])
+  const [suggestions, setSuggestions] = useState<PostTag[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export function TagInput({ value, onChange }: Props) {
         <div className="taginput__menu">
           {suggestions.slice(0, 6).map((tag) => (
             <button className="taginput__option" type="button" key={tag.id} onClick={() => add(tag.name)}>
-              {tag.name} <span className="faint">· {tag.postCount} posts</span>
+              {tag.name} <span className="muted">· {tag.postCount} posts</span>
             </button>
           ))}
         </div>

@@ -118,6 +118,12 @@ public class PostsController : ControllerBase
     public async Task<ActionResult<PostDetailDto>> Unpublish(Guid id, CancellationToken ct) =>
         Ok(await _posts.UnpublishAsync(id, _currentUser.RequireUserId(), ct));
 
+    /// <summary>Moves one of your posts to Draft, Published or Inactive.</summary>
+    [HttpPost("{id:guid}/status")]
+    [Authorize]
+    public async Task<ActionResult<PostDetailDto>> SetStatus(Guid id, SetPostStatusRequest request, CancellationToken ct) =>
+        Ok(await _posts.SetStatusAsync(id, request.Status, _currentUser.RequireUserId(), ct));
+
     [HttpDelete("{id:guid}")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

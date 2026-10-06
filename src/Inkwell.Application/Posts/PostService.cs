@@ -32,6 +32,7 @@ public sealed class PostService : IPostService
 
     public async Task<PostDetailDto> CreateDraftAsync(CreatePostRequest request, Guid authorId, CancellationToken ct = default)
     {
+        PostContent.Validate(request.ContentJson);
         var plainText = ProseMirrorText.Extract(request.ContentJson);
         var post = new Post(authorId, request.Title, request.Subtitle, request.ContentJson, plainText, request.CoverImageUrl);
 
@@ -50,6 +51,7 @@ public sealed class PostService : IPostService
         // Snapshot the pre-edit body first, so a bad edit is always recoverable.
         await _posts.AddRevisionAsync(new PostRevision(post.Id, post.Title, post.ContentJson), ct);
 
+        PostContent.Validate(request.ContentJson);
         var plainText = ProseMirrorText.Extract(request.ContentJson);
         post.UpdateDraft(request.Title, request.Subtitle, request.ContentJson, plainText, request.CoverImageUrl);
 
@@ -59,41 +61,21 @@ public sealed class PostService : IPostService
         return await LoadDetailAsync(post.Id, authorId, ct);
     }
 
-    public async Task<PostDetailDto> PublishAsync(Guid id, Guid authorId, CancellationToken ct = default)
+    public Task<PostDetailDto> PublishAsync(Guid id, Guid authorId, CancellationToken ct = default) =>
+        ChangeStatusAsync(id, PostStatus.Published, authorId, ct);
+
+    public Task<PostDetailDto> UnpublishAsync(Guid id, Guid authorId, CancellationToken ct = default) =>
+        ChangeStatusAsync(id, PostStatus.Inactive, authorId, ct);
+
+    public Task<PostDetailDto> SetStatusAsync(Guid id, string status, Guid authorId, CancellationToken ct = default) =>
+        ChangeStatusAsync(id, PostStatusChange.Parse(status), authorId, ct);
+
+    private async Task<PostDetailDto> ChangeStatusAsync(Guid id, PostStatus status, Guid authorId, CancellationToken ct)
     {
         var post = await _posts.GetByIdAsync(id, ct) ?? throw new NotFoundException(nameof(Post), id);
         post.EnsureOwnedBy(authorId);
 
-        var wasPublished = post.Status == PostStatus.Published;
-        post.Publish(await ResolveSlugAsync(post.Title, ct));
-
-        if (!wasPublished)
-        {
-            foreach (var postTag in post.PostTags)
-            {
-                postTag.Tag?.IncrementPostCount();
-            }
-        }
-
-        await _unitOfWork.SaveChangesAsync(ct);
-        return await LoadDetailAsync(post.Id, authorId, ct);
-    }
-
-    public async Task<PostDetailDto> UnpublishAsync(Guid id, Guid authorId, CancellationToken ct = default)
-    {
-        var post = await _posts.GetByIdAsync(id, ct) ?? throw new NotFoundException(nameof(Post), id);
-        post.EnsureOwnedBy(authorId);
-
-        var wasPublished = post.Status == PostStatus.Published;
-        post.Unpublish();
-
-        if (wasPublished)
-        {
-            foreach (var postTag in post.PostTags)
-            {
-                postTag.Tag?.DecrementPostCount();
-            }
-        }
+        await PostStatusChange.ApplyAsync(post, status, _posts, ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
         return await LoadDetailAsync(post.Id, authorId, ct);
@@ -176,20 +158,6 @@ public sealed class PostService : IPostService
 
         var revisions = await _posts.GetRevisionsAsync(postId, limit, ct);
         return revisions.Select(r => r.ToDto()).ToList();
-    }
-
-    /// <summary>
-    /// Resolves the canonical slug for a title, appending a discriminator when the base is taken.
-    /// Only ever called on first publish; existing slugs are never recomputed.
-    /// </summary>
-    private async Task<string> ResolveSlugAsync(string title, CancellationToken ct)
-    {
-        var baseSlug = SlugGenerator.Generate(title);
-        if (string.IsNullOrEmpty(baseSlug)) baseSlug = "post";
-
-        return await _posts.SlugExistsAsync(baseSlug, ct)
-            ? SlugGenerator.WithSuffix(baseSlug)
-            : baseSlug;
     }
 
     /// <summary>

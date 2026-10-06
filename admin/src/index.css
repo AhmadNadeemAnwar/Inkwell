@@ -308,3 +308,98 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-vi
   .toast { animation: rise 0.18s ease-out; }
   @keyframes rise { from { transform: translateY(6px); opacity: 0; } }
 }
+
+/* ---- Post editor ------------------------------------------------------------------------------------ */
+
+.writer { max-width: 46rem; }
+.writer .note:not(.note--error) { justify-content: flex-start; flex-wrap: wrap; gap: 0.6rem; background: var(--accent-soft); color: var(--text); }
+
+.writer__title, .writer__subtitle {
+  border: 0; background: none; padding: 0; width: 100%; border-radius: 0;
+  font-family: Georgia, 'Times New Roman', serif; letter-spacing: -0.02em;
+}
+.writer__title { font-size: 2.1rem; line-height: 1.2; font-weight: 600; margin-bottom: 0.4rem; }
+.writer__subtitle { font-size: 1.15rem; color: var(--text-muted); margin-bottom: 1.25rem; }
+.writer__title:focus-visible, .writer__subtitle:focus-visible { outline: none; }
+.writer__details { margin-top: 2rem; }
+
+.editor__toolbar {
+  display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.45rem 0; margin-bottom: 1.25rem;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg); z-index: 5;
+}
+.editor__tool { border: 0; background: none; border-radius: 4px; padding: 0.3rem 0.6rem; color: var(--text-muted); font: inherit; font-size: 0.85rem; cursor: pointer; }
+.editor__tool:hover { background: var(--bg-subtle); color: var(--text); }
+.editor__tool--active { background: var(--accent-soft); color: var(--accent); }
+
+.ProseMirror { min-height: 22rem; outline: none; }
+.ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: var(--text-faint); }
+
+.prose { font-family: Georgia, 'Times New Roman', serif; font-size: 1.12rem; line-height: 1.75; overflow-wrap: anywhere; }
+.prose p { margin: 0 0 1.3em; }
+.prose h2 { font-size: 1.55rem; margin: 1.8em 0 0.6em; }
+.prose h3 { font-size: 1.25rem; margin: 1.6em 0 0.5em; }
+.prose blockquote { margin: 1.5em 0; padding-left: 1.1rem; border-left: 3px solid var(--accent); color: var(--text-muted); font-style: italic; }
+.prose ul, .prose ol { margin: 0 0 1.3em; padding-left: 1.4rem; }
+.prose li { margin-bottom: 0.4em; }
+.prose li p { margin: 0; }
+.prose pre { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.9rem; overflow-x: auto; font-family: var(--mono); font-size: 0.9rem; line-height: 1.6; }
+.prose pre code { background: none; padding: 0; }
+.prose hr { border: 0; border-top: 1px solid var(--border); margin: 2.2em 0; }
+.prose a { text-decoration: underline; text-underline-offset: 2px; }
+
+.taginput { position: relative; }
+.taginput__field { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 0.4rem; }
+.taginput__field input { border: 0; padding: 0.2rem; width: auto; flex: 1; min-width: 8rem; background: none; }
+.taginput__field input:focus-visible { outline: none; }
+.taginput__field:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.taginput__chip { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 0.15rem 0.3rem 0.15rem 0.65rem; font-size: 0.8rem; }
+.taginput__chip button { border: 0; background: none; color: inherit; font: inherit; line-height: 1; padding: 0 0.25rem; cursor: pointer; }
+.taginput__menu { position: absolute; z-index: 15; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: 0 6px 20px rgb(0 0 0 / 0.15); overflow: hidden; }
+.taginput__option { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--text); font: inherit; padding: 0.5rem 0.75rem; font-size: 0.9rem; cursor: pointer; }
+.taginput__option:hover { background: var(--bg-subtle); }
+
+/* ---- Sections of a post ----------------------------------------------------------------------------- */
+
+.sections { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0 1.1rem 1.1rem; }
+.section:focus-within { border-color: var(--border-strong); }
+.section__head { display: flex; align-items: center; gap: 0.25rem; padding: 0.55rem 0; }
+.section__label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+.section__tool { border: 1px solid transparent; background: none; border-radius: 6px; min-width: 2rem; height: 2rem; color: var(--text-muted); font: inherit; cursor: pointer; }
+.section__tool:hover:not(:disabled) { background: var(--bg-subtle); color: var(--text); }
+.section__tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.section__tool:disabled { opacity: 0.3; cursor: not-allowed; }
+.section__tool--danger:hover:not(:disabled) { background: var(--bad-soft); color: var(--bad); }
+.section__body .field:last-of-type { margin-bottom: 0.75rem; }
+.section__image { display: block; max-width: 100%; max-height: 26rem; border-radius: var(--radius); margin: 0 auto 1rem; }
+.section__drop { border: 1px dashed var(--border-strong); border-radius: var(--radius); padding: 1.75rem 1rem; text-align: center; }
+.section__drop .field__hint { margin-bottom: 0; }
+
+/* Each text section has its own toolbar, so it stays with its section instead of sticking to the page. */
+.section .editor__toolbar { position: static; margin-bottom: 1rem; border-top: 0; padding-top: 0; }
+.section .ProseMirror { min-height: 7rem; }
+
+.section-add { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+
+.references { list-style: decimal; margin: 0 0 0.75rem; padding-left: 1.4rem; display: grid; gap: 0.5rem; }
+.reference { padding-left: 0.2rem; }
+.reference input { margin-bottom: 0.35rem; }
+.reference { display: list-item; }
+.reference > input:first-of-type { font-weight: 500; }
+@media (min-width: 720px) {
+  .references { gap: 0.4rem; }
+  .reference::marker { color: var(--text-faint); }
+  .reference { display: list-item; }
+  .reference > * { vertical-align: middle; }
+  .reference > input { display: inline-block; width: calc(50% - 1.6rem); margin: 0 0.4rem 0 0; }
+}
+
+.writer__cover { display: block; max-width: 100%; max-height: 16rem; border-radius: var(--radius); margin-bottom: 0.6rem; }
+.writer__cover-actions { display: flex; gap: 0.5rem; }
+
+.status-pick { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.status-pick select, .status-select { width: auto; padding: 0.3rem 1.6rem 0.3rem 0.6rem; border-radius: 999px; font-size: 0.85rem; }
+.status-select--published { background: var(--good-soft); color: var(--good); border-color: transparent; }
+.status-select--inactive { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.status-select option { background: var(--surface); color: var(--text); }

@@ -63,7 +63,7 @@ public class AdminServiceTests : IDisposable
 
         stats.PublishedPosts.Should().Be(2);
         stats.DraftPosts.Should().Be(1);
-        stats.UnlistedPosts.Should().Be(0);
+        stats.InactivePosts.Should().Be(0);
         stats.Users.Should().Be(2);
         stats.Comments.Should().Be(1);
         stats.Claps.Should().Be(7);
@@ -165,7 +165,7 @@ public class AdminServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Taking_a_post_down_returns_it_to_draft_and_releases_its_tag_counts()
+    public async Task Taking_a_post_down_makes_it_inactive_and_releases_its_tag_counts()
     {
         var ada = await _fixture.AddUserAsync("ada");
         var id = await PublishedAsync(ada.Id, "Controversial", "news", "tech");
@@ -173,19 +173,62 @@ public class AdminServiceTests : IDisposable
 
         await _admin.UnpublishPostAsync(id, "owner@example.com");
 
-        (await _fixture.Posts.GetByIdAsync(id))!.Status.ToString().Should().Be("Draft");
+        (await _fixture.Posts.GetByIdAsync(id))!.Status.ToString().Should().Be("Inactive");
+        (await _admin.GetStatsAsync()).InactivePosts.Should().Be(1);
         (await PostCountAsync("news")).Should().Be(0);
         (await PostCountAsync("tech")).Should().Be(0);
     }
 
     [Fact]
-    public async Task A_draft_cannot_be_taken_down_and_an_unknown_post_is_not_found()
+    public async Task Taking_down_twice_is_refused_and_an_unknown_post_is_not_found()
     {
         var ada = await _fixture.AddUserAsync("ada");
-        var draft = await DraftAsync(ada.Id, "Draft");
+        var id = await PublishedAsync(ada.Id, "Once is enough");
+        await _admin.UnpublishPostAsync(id, "x");
 
-        (await Record.ExceptionAsync(() => _admin.UnpublishPostAsync(draft, "x"))).Should().BeOfType<DomainException>();
+        (await Record.ExceptionAsync(() => _admin.UnpublishPostAsync(id, "x"))).Should().BeOfType<DomainException>();
         (await Record.ExceptionAsync(() => _admin.UnpublishPostAsync(Guid.NewGuid(), "x"))).Should().BeOfType<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task An_admin_can_put_any_post_back_up_and_its_tag_counts_return()
+    {
+        var ada = await _fixture.AddUserAsync("ada");
+        var id = await PublishedAsync(ada.Id, "Back and forth", "news");
+        var slug = (await _fixture.Posts.GetByIdAsync(id))!.Slug;
+        await _admin.SetPostStatusAsync(id, "Inactive", "owner@example.com");
+
+        await _admin.SetPostStatusAsync(id, "Published", "owner@example.com");
+
+        var post = await _fixture.Posts.GetByIdAsync(id);
+        post!.Status.ToString().Should().Be("Published");
+        post.Slug.Should().Be(slug);
+        (await PostCountAsync("news")).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task An_admin_publishing_a_never_published_draft_gives_it_an_address()
+    {
+        var ada = await _fixture.AddUserAsync("ada");
+        var draft = await DraftAsync(ada.Id, "First Time Out");
+
+        await _admin.SetPostStatusAsync(draft, "Published", "owner@example.com");
+
+        (await _fixture.Posts.GetByIdAsync(draft))!.Slug.Should().Be("first-time-out");
+    }
+
+    [Theory]
+    [InlineData("Unlisted")]
+    [InlineData("Deleted")]
+    [InlineData("")]
+    public async Task The_posts_list_and_status_change_accept_only_the_three_states(string status)
+    {
+        var ada = await _fixture.AddUserAsync("ada");
+        var id = await PublishedAsync(ada.Id, "Guarded");
+
+        (await Record.ExceptionAsync(() => _admin.SetPostStatusAsync(id, status, "x"))).Should().BeOfType<DomainException>();
+        if (status.Length > 0)
+            (await Record.ExceptionAsync(() => _admin.GetPostsAsync(status, null, 1, 10))).Should().BeOfType<DomainException>();
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-export type PostStatus = 'Draft' | 'Published' | 'Unlisted'
+export type PostStatus = 'Draft' | 'Published' | 'Inactive'
 
 export interface Author {
   id: string

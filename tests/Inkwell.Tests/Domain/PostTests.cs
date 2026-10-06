@@ -52,12 +52,72 @@ public class PostTests
         post.Publish("original-title");
         var publishedAt = post.PublishedAt;
 
-        post.Unpublish();
+        post.Deactivate();
         post.UpdateDraft("A completely different title", null, TestDatabase.Document("Body"), "Body", null);
         post.Publish("a-completely-different-title");
 
         post.Slug.Should().Be("original-title");
         post.PublishedAt.Should().Be(publishedAt);
+    }
+
+    [Fact]
+    public void A_post_can_move_between_all_three_states()
+    {
+        var post = NewPost();
+
+        post.Publish("a-title");
+        post.Deactivate();
+        post.Status.Should().Be(PostStatus.Inactive);
+
+        post.MoveToDraft();
+        post.Status.Should().Be(PostStatus.Draft);
+
+        post.Deactivate();
+        post.Status.Should().Be(PostStatus.Inactive, "a draft can be switched off without ever being published");
+
+        post.Publish("ignored-because-it-already-has-one");
+        post.Status.Should().Be(PostStatus.Published);
+        post.Slug.Should().Be("a-title");
+    }
+
+    [Fact]
+    public void Moving_to_the_state_it_is_already_in_is_rejected()
+    {
+        var post = NewPost();
+
+        ((Action)post.MoveToDraft).Should().Throw<DomainException>().WithMessage("*already a draft*");
+
+        post.Deactivate();
+        ((Action)post.Deactivate).Should().Throw<DomainException>().WithMessage("*already not active*");
+    }
+
+    [Fact]
+    public void Only_a_published_post_is_visible_to_readers()
+    {
+        var authorId = Guid.NewGuid();
+        var post = new Post(authorId, "Title", null, TestDatabase.Document("body"), "body");
+
+        post.Publish("title");
+        post.IsVisibleTo(null).Should().BeTrue();
+
+        post.Deactivate();
+        post.IsVisibleTo(null).Should().BeFalse("an inactive post is hidden even from someone holding its link");
+        post.IsVisibleTo(Guid.NewGuid()).Should().BeFalse();
+        post.IsVisibleTo(authorId).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("/api/v1/images/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11", true)]
+    [InlineData("https://example.com/cover.jpg", true)]
+    [InlineData("http://example.com/cover.jpg", false)]
+    [InlineData("/api/v1/images/../admin/stats", false)]
+    [InlineData("/some/other/path.png", false)]
+    public void A_cover_is_an_uploaded_picture_or_an_https_link(string cover, bool allowed)
+    {
+        var act = () => new Post(Guid.NewGuid(), "Title", null, TestDatabase.Document("body"), "body", cover);
+
+        if (allowed) act.Should().NotThrow();
+        else act.Should().Throw<DomainException>().WithMessage("*Cover image*");
     }
 
     [Fact]

@@ -19,6 +19,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<UserFollow> UserFollows => Set<UserFollow>();
     public DbSet<TagFollow> TagFollows => Set<TagFollow>();
     public DbSet<PostRevision> PostRevisions => Set<PostRevision>();
+    public DbSet<StoredImage> Images => Set<StoredImage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

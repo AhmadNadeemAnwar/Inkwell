@@ -372,3 +372,14 @@ input:focus, textarea:focus, select:focus {
 
 .profile__head { display: flex; gap: 1.25rem; align-items: flex-start; padding-bottom: 2rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
 .profile__stats { display: flex; gap: 1.25rem; font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+/* ---- Sections of a post: pictures and sources -------------------------------------------- */
+
+.prose__figure { margin: 2em 0; }
+.prose__figure img { display: block; width: 100%; height: auto; }
+.prose__figure figcaption { margin-top: 0.6em; font-family: var(--font-ui); font-size: 0.85rem; line-height: 1.5; color: var(--text-muted); text-align: center; }
+
+.prose__references { margin-top: 3em; padding-top: 1.5em; border-top: 1px solid var(--border); font-family: var(--font-ui); font-size: 0.95rem; line-height: 1.6; }
+.prose__references h2 { font-family: var(--font-ui); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 0.8em; }
+.prose__references ol { margin: 0; }
+.prose__references li { overflow-wrap: anywhere; }

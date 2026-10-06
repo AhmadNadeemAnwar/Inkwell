@@ -11,11 +11,11 @@ interface Props {
   onChange: (contentJson: string) => void
 }
 
-export function Editor({ initialContent, onChange }: Props) {
+export function RichEditor({ initialContent, onChange }: Props) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3] } }),
-      Placeholder.configure({ placeholder: 'Tell your story…' }),
+      Placeholder.configure({ placeholder: 'Write your post…' }),
       Link.configure({ openOnClick: false, autolink: true }),
     ],
     content: initialContent ? safeParse(initialContent) : '',
@@ -48,11 +48,11 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
 
   return (
     <div className="editor__toolbar" role="toolbar" aria-label="Formatting">
-      <button type="button" className={tool(editor.isActive('bold'))}
+      <button type="button" aria-label="Bold" className={tool(editor.isActive('bold'))}
         onClick={() => editor.chain().focus().toggleBold().run()}>
         <strong>B</strong>
       </button>
-      <button type="button" className={tool(editor.isActive('italic'))}
+      <button type="button" aria-label="Italic" className={tool(editor.isActive('italic'))}
         onClick={() => editor.chain().focus().toggleItalic().run()}>
         <em>I</em>
       </button>
@@ -83,7 +83,7 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
       <button type="button" className={tool(editor.isActive('link'))} onClick={() => promptForLink(editor)}>
         Link
       </button>
-      <button type="button" className="editor__tool"
+      <button type="button" aria-label="Divider line" className="editor__tool"
         onClick={() => editor.chain().focus().setHorizontalRule().run()}>
         —
       </button>

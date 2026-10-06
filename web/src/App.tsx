@@ -1,4 +1,3 @@
-import { Suspense, lazy } from 'react'
 import type { ReactElement } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
@@ -6,11 +5,7 @@ import { Layout } from './components/Layout'
 import { EmptyState, Spinner } from './components/ui'
 import { LoginPage, RegisterPage } from './pages/AuthPages'
 import { HomePage } from './pages/HomePage'
-
-// TipTap is the largest dependency in the app and only writers ever load it,
-// so the editor route is split out of the main bundle.
-const EditorPage = lazy(() => import('./pages/EditorPage').then((m) => ({ default: m.EditorPage })))
-import { BookmarksPage, DraftsPage } from './pages/LibraryPages'
+import { BookmarksPage } from './pages/LibraryPages'
 import { PostPage } from './pages/PostPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SearchPage } from './pages/SearchPage'
@@ -23,14 +18,6 @@ function RequireAuth({ children }: { children: ReactElement }) {
   if (loading) return <main className="main"><Spinner /></main>
   if (!user) return <Navigate to="/login" replace />
   return children
-}
-
-function LazyEditor() {
-  return (
-    <Suspense fallback={<main className="main main--reading"><Spinner label="Loading editor…" /></main>}>
-      <EditorPage />
-    </Suspense>
-  )
 }
 
 /** On a closed site the sign-up page does not exist, so it answers like any other unknown address. */
@@ -54,14 +41,11 @@ export default function App() {
             <Route path="/p/:slug" element={<PostPage />} />
             {/* React Router cannot match a partial segment like "/@:handle", so profiles take the
                 whole segment and ProfilePage requires the leading "@". Static routes above and
-                below outrank this one, so /login, /write etc. are unaffected. */}
+                below outrank this one, so /login, /search etc. are unaffected. */}
             <Route path="/:handle" element={<ProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterRoute />} />
 
-            <Route path="/write" element={<RequireAuth><LazyEditor /></RequireAuth>} />
-            <Route path="/write/:id" element={<RequireAuth><LazyEditor /></RequireAuth>} />
-            <Route path="/me/drafts" element={<RequireAuth><DraftsPage /></RequireAuth>} />
             <Route path="/me/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />
 
             <Route path="*" element={<main className="main"><EmptyState title="Page not found" /></main>} />

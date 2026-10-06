@@ -3,6 +3,7 @@ using Inkwell.Api.Common;
 using Inkwell.Api.Contracts;
 using Inkwell.Application.Admin;
 using Inkwell.Application.Admin.Dtos;
+using Inkwell.Application.Posts.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -37,7 +38,15 @@ public class AdminController : ControllerBase
         return Ok(PagedResponse<AdminPostDto>.From(page));
     }
 
-    /// <summary>Takes a published post offline (back to draft) without deleting it.</summary>
+    /// <summary>Moves any post to Draft, Published or Inactive.</summary>
+    [HttpPost("posts/{id:guid}/status")]
+    public async Task<IActionResult> SetPostStatus(Guid id, SetPostStatusRequest request, CancellationToken ct)
+    {
+        await _admin.SetPostStatusAsync(id, request.Status, Admin, ct);
+        return NoContent();
+    }
+
+    /// <summary>Takes a published post offline (it becomes Inactive) without deleting it.</summary>
     [HttpPost("posts/{id:guid}/unpublish")]
     public async Task<IActionResult> Unpublish(Guid id, CancellationToken ct)
     {

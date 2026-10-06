@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+import { Link } from 'react-router-dom'
+import { api, sessionHandle } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import type { AdminPost, PostStatus } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { useConfirm, useToast } from '../components/feedback'
-import { Badge, Empty, ErrorNote, PageHeader, Pagination, Spinner, formatDate, formatNumber, publicPostUrl } from '../components/ui'
+import { Empty, ErrorNote, PageHeader, Pagination, Spinner, formatDate, formatNumber, publicPostUrl, statusLabels } from '../components/ui'
 
-const toneFor: Record<PostStatus, 'good' | 'neutral' | 'info'> = { Published: 'good', Draft: 'neutral', Unlisted: 'info' }
+const STATUSES: PostStatus[] = ['Draft', 'Published', 'Inactive']
 
 export function PostsPage() {
   const confirm = useConfirm()
   const notify = useToast()
+  const myHandle = sessionHandle(useAuth().session)
 
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
@@ -25,15 +28,23 @@ export function PostsPage() {
 
   const posts = useAsync(() => api.posts({ status, q: term, pageNumber: page, pageSize: 20 }), [status, term, page])
 
-  async function takeDown(post: AdminPost) {
-    const ok = await confirm({
-      title: 'Take this post down?',
-      message: <>“{post.title}” goes back to a draft and disappears from the site. Nothing is deleted; its author can publish it again.</>,
-      confirmLabel: 'Take down',
-    })
+  async function changeStatus(post: AdminPost, target: PostStatus) {
+    if (target === post.status) return
+
+    const ok = await confirm(
+      target === 'Published'
+        ? { title: 'Publish this post?', message: <>“{post.title}” goes live on Inkwell straight away{post.slug ? ', at the same address as before' : ''}.</>, confirmLabel: 'Publish' }
+        : post.status === 'Published'
+          ? {
+              title: 'Take this post down?',
+              message: <>“{post.title}” comes off the site at once and becomes {statusLabels[target].toLowerCase()}. Nothing is deleted, and it keeps its address for when it is published again.</>,
+              confirmLabel: 'Take down',
+            }
+          : { title: `Change to ${statusLabels[target].toLowerCase()}?`, message: <>“{post.title}” stays hidden from readers either way.</>, confirmLabel: 'Change' },
+    )
     if (!ok) return
 
-    await act(post, () => api.unpublishPost(post.id), 'Post taken down.')
+    await act(post, () => api.adminSetPostStatus(post.id, target), target === 'Published' ? 'Post published.' : `Post is now ${statusLabels[target].toLowerCase()}.`)
   }
 
   async function remove(post: AdminPost) {
@@ -63,7 +74,9 @@ export function PostsPage() {
 
   return (
     <>
-      <PageHeader title="Posts" />
+      <PageHeader title="Posts">
+        <Link className="btn btn--primary" to="/posts/new">New post</Link>
+      </PageHeader>
 
       <div className="filters">
         <input type="search" placeholder="Search title or author" aria-label="Search posts" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -71,7 +84,7 @@ export function PostsPage() {
           <option value="">All statuses</option>
           <option value="Published">Published</option>
           <option value="Draft">Drafts</option>
-          <option value="Unlisted">Unlisted</option>
+          <option value="Inactive">Not active</option>
         </select>
       </div>
 
@@ -79,7 +92,9 @@ export function PostsPage() {
       {posts.loading && !posts.data && <Spinner />}
 
       {posts.data && (posts.data.items.length === 0 ? (
-        <Empty title="No posts match">Try a different search or status.</Empty>
+        <Empty title={term || status ? 'No posts match' : 'No posts yet'}>
+          {term || status ? 'Try a different search or status.' : <Link className="btn btn--primary" to="/posts/new">Write your first post</Link>}
+        </Empty>
       ) : (
         <>
           <div className="table-wrap">
@@ -96,17 +111,22 @@ export function PostsPage() {
                   return (
                     <tr key={post.id} className={busyId === post.id ? 'is-busy' : undefined}>
                       <td>
-                        <div className="cell-title">{url && post.status !== 'Draft' ? <a href={url} target="_blank" rel="noopener noreferrer">{post.title}</a> : post.title}</div>
+                        <div className="cell-title">{url && post.status === 'Published' ? <a href={url} target="_blank" rel="noopener noreferrer">{post.title}</a> : post.title}</div>
                         {post.tags.length > 0 && <div className="cell-sub">{post.tags.join(' · ')}</div>}
                       </td>
                       <td>@{post.authorHandle}</td>
-                      <td><Badge tone={toneFor[post.status]}>{post.status}</Badge></td>
+                      <td>
+                        <select className={`status-select status-select--${post.status.toLowerCase()}`} aria-label={`Status of ${post.title}`}
+                          value={post.status} disabled={busyId === post.id} onChange={(e) => changeStatus(post, e.target.value as PostStatus)}>
+                          {STATUSES.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}
+                        </select>
+                      </td>
                       <td>{formatDate(post.publishedAt)}</td>
                       <td className="num">{formatNumber(post.views)}</td>
                       <td className="num">{formatNumber(post.claps)}</td>
                       <td className="num">{formatNumber(post.comments)}</td>
                       <td className="actions">
-                        {post.status !== 'Draft' && <button className="btn btn--small" onClick={() => takeDown(post)} disabled={busyId === post.id}>Take down</button>}
+                        {post.authorHandle === myHandle && <Link className="btn btn--small" to={`/posts/${post.id}/edit`}>Edit</Link>}
                         <button className="btn btn--small btn--danger" onClick={() => remove(post)} disabled={busyId === post.id}>Delete</button>
                       </td>
                     </tr>

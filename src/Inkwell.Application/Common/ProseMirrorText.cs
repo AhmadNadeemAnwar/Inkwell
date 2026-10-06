@@ -14,7 +14,8 @@ public static class ProseMirrorText
     /// <summary>Block-level node types that should produce a paragraph break in the flattened output.</summary>
     private static readonly HashSet<string> BlockTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "paragraph", "heading", "blockquote", "codeBlock", "listItem", "horizontalRule"
+        "paragraph", "heading", "blockquote", "codeBlock", "listItem", "horizontalRule",
+        PostContent.TextSection
     };
 
     public static string Extract(string contentJson)
@@ -61,6 +62,28 @@ public static class ProseMirrorText
             return;
         }
 
+        // An image section is found by its description and caption.
+        if (type == PostContent.ImageSection)
+        {
+            if (element.TryGetProperty("attrs", out var image) && image.ValueKind == JsonValueKind.Object)
+            {
+                AppendText(image, "alt", builder);
+                AppendText(image, "caption", builder);
+            }
+            return;
+        }
+
+        // A reference section is found by the titles of its sources; their links are not prose.
+        if (type == PostContent.ReferencesSection)
+        {
+            if (element.TryGetProperty("attrs", out var references) && references.ValueKind == JsonValueKind.Object
+                && references.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in items.EnumerateArray()) AppendText(item, "title", builder);
+            }
+            return;
+        }
+
         if (element.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array)
         {
             foreach (var child in content.EnumerateArray())
@@ -70,6 +93,15 @@ public static class ProseMirrorText
         }
 
         if (type is not null && BlockTypes.Contains(type)) builder.Append('\n');
+    }
+
+    private static void AppendText(JsonElement element, string name, StringBuilder builder)
+    {
+        if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value)
+            && value.ValueKind == JsonValueKind.String)
+        {
+            builder.Append(value.GetString()).Append('\n');
+        }
     }
 
     private static string CollapseWhitespace(string value)

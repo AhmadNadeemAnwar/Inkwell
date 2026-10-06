@@ -89,9 +89,6 @@ export function PostPage() {
               {viewer.isFollowingAuthor ? 'Following' : 'Follow'}
             </button>
           )}
-          {viewer?.isAuthor && (
-            <Link className="btn" to={`/write/${local.id}`}>Edit</Link>
-          )}
         </div>
 
         {safeImageSrc(local.coverImageUrl) && (

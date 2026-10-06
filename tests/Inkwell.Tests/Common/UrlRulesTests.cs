@@ -12,6 +12,28 @@ namespace Inkwell.Tests.Common;
 
 public class UrlRulesTests
 {
+    [Fact]
+    public void An_uploaded_picture_has_one_exact_address_shape()
+    {
+        var id = Guid.NewGuid();
+
+        UrlRules.StoredImagePath(id).Should().Be($"/api/v1/images/{id}");
+        UrlRules.IsStoredImagePath(UrlRules.StoredImagePath(id)).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("/api/v1/images/")]
+    [InlineData("/api/v1/images/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11/extra")]
+    [InlineData("/api/v1/images/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11?x=1")]
+    [InlineData("/api/v1/images/../admin/stats")]
+    [InlineData("//evil.example/api/v1/images/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11")]
+    [InlineData("https://evil.example/api/v1/images/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11x")]
+    [InlineData("/api/v1/posts")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void Nothing_else_passes_as_an_uploaded_picture(string? value) =>
+        UrlRules.IsStoredImagePath(value).Should().BeFalse();
+
     [Theory]
     [InlineData("https://example.com")]
     [InlineData("https://example.com/a/b?c=d#e")]

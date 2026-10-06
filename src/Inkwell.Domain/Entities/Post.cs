@@ -62,8 +62,8 @@ public class Post : BaseEntity
         if (title.Trim().Length > MaxTitleLength) throw new DomainException($"Title cannot exceed {MaxTitleLength} characters.");
         if (subtitle is { Length: > MaxSubtitleLength }) throw new DomainException($"Subtitle cannot exceed {MaxSubtitleLength} characters.");
         if (string.IsNullOrWhiteSpace(contentJson)) throw new DomainException("Content is required.");
-        if (!string.IsNullOrWhiteSpace(coverImageUrl) && !UrlRules.IsHttps(coverImageUrl))
-            throw new DomainException("Cover image must be a link starting with https://.");
+        if (!string.IsNullOrWhiteSpace(coverImageUrl) && !UrlRules.IsImageReference(coverImageUrl))
+            throw new DomainException("Cover image must be an uploaded picture or a link starting with https://.");
 
         Title = title.Trim();
         Subtitle = string.IsNullOrWhiteSpace(subtitle) ? null : subtitle.Trim();
@@ -85,22 +85,24 @@ public class Post : BaseEntity
         Touch();
     }
 
-    public void Unpublish()
+    /// <summary>Switches the post off. It keeps its address, so publishing it again restores the same link.</summary>
+    public void Deactivate()
+    {
+        if (Status == PostStatus.Inactive) throw new DomainException("Post is already not active.");
+        Status = PostStatus.Inactive;
+        Touch();
+    }
+
+    public void MoveToDraft()
     {
         if (Status == PostStatus.Draft) throw new DomainException("Post is already a draft.");
         Status = PostStatus.Draft;
         Touch();
     }
 
-    public void MakeUnlisted()
-    {
-        if (Slug is null) throw new DomainException("Publish the post at least once before unlisting it.");
-        Status = PostStatus.Unlisted;
-        Touch();
-    }
-
+    /// <summary>Only a published post is public. Drafts and inactive posts are for their author alone.</summary>
     public bool IsVisibleTo(Guid? viewerId) =>
-        Status is PostStatus.Published or PostStatus.Unlisted || (viewerId.HasValue && viewerId.Value == AuthorId);
+        Status == PostStatus.Published || (viewerId.HasValue && viewerId.Value == AuthorId);
 
     public void EnsureOwnedBy(Guid userId)
     {

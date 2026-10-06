@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<IEngagementRepository, EngagementRepository>();
         services.AddScoped<IAdminRepository, AdminRepository>();
+        services.AddScoped<IImageRepository, ImageRepository>();
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();

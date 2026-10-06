@@ -35,8 +35,6 @@ export function Layout() {
             {user ? (
               <>
                 <Link className="btn btn--ghost" to="/me/bookmarks">Saved</Link>
-                <Link className="btn btn--ghost" to="/me/drafts">Drafts</Link>
-                <Link className="btn btn--primary" to="/write">Write</Link>
                 <Link to={`/@${user.handle}`} title={user.displayName}>
                   <Avatar author={user} />
                 </Link>

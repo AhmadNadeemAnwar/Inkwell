@@ -8,7 +8,7 @@ public sealed record TopPost(Guid Id, string Title, string? Slug, int Views, int
 public sealed record AdminStats(
     int PublishedPosts,
     int DraftPosts,
-    int UnlistedPosts,
+    int InactivePosts,
     int Users,
     int Comments,
     long Claps,

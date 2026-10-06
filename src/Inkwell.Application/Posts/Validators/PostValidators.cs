@@ -16,8 +16,8 @@ public sealed class CreatePostRequestValidator : AbstractValidator<CreatePostReq
         RuleFor(x => x.Subtitle).MaximumLength(Post.MaxSubtitleLength);
         RuleFor(x => x.ContentJson).NotEmpty().WithMessage("Post content is required.");
         RuleFor(x => x.CoverImageUrl).MaximumLength(2048)
-            .Must(UrlRules.IsHttps).When(x => !string.IsNullOrWhiteSpace(x.CoverImageUrl))
-            .WithMessage("Cover image must be a link starting with https://.");
+            .Must(UrlRules.IsImageReference).When(x => !string.IsNullOrWhiteSpace(x.CoverImageUrl))
+            .WithMessage("Cover image must be an uploaded picture or a link starting with https://.");
 
         RuleFor(x => x.Tags)
             .Must(tags => tags is null || tags.Count <= 5)
@@ -36,8 +36,8 @@ public sealed class UpdatePostRequestValidator : AbstractValidator<UpdatePostReq
         RuleFor(x => x.Subtitle).MaximumLength(Post.MaxSubtitleLength);
         RuleFor(x => x.ContentJson).NotEmpty().WithMessage("Post content is required.");
         RuleFor(x => x.CoverImageUrl).MaximumLength(2048)
-            .Must(UrlRules.IsHttps).When(x => !string.IsNullOrWhiteSpace(x.CoverImageUrl))
-            .WithMessage("Cover image must be a link starting with https://.");
+            .Must(UrlRules.IsImageReference).When(x => !string.IsNullOrWhiteSpace(x.CoverImageUrl))
+            .WithMessage("Cover image must be an uploaded picture or a link starting with https://.");
 
         RuleFor(x => x.Tags)
             .Must(tags => tags is null || tags.Count <= 5)

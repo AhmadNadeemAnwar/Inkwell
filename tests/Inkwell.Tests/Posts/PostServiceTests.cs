@@ -91,6 +91,94 @@ public class PostServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Taking_a_post_down_makes_it_inactive_not_a_draft()
+    {
+        var author = await _fixture.AddUserAsync();
+        var draft = await _service.CreateDraftAsync(NewRequest(), author.Id);
+        await _service.PublishAsync(draft.Id, author.Id);
+
+        var taken = await _service.UnpublishAsync(draft.Id, author.Id);
+
+        taken.Status.Should().Be("Inactive");
+    }
+
+    [Fact]
+    public async Task A_topic_only_counts_posts_that_are_live_through_every_change_of_state()
+    {
+        var author = await _fixture.AddUserAsync();
+        var draft = await _service.CreateDraftAsync(NewRequest(tags: ["Engineering"]), author.Id);
+
+        async Task<int> CountAfter(string status)
+        {
+            await _service.SetStatusAsync(draft.Id, status, author.Id);
+            return (await _fixture.Tags.GetBySlugAsync("engineering"))!.PostCount;
+        }
+
+        (await CountAfter("Published")).Should().Be(1);
+        (await CountAfter("Inactive")).Should().Be(0);
+        (await CountAfter("Draft")).Should().Be(0, "inactive to draft is hidden to hidden, so the count must not move");
+        (await CountAfter("Inactive")).Should().Be(0);
+        (await CountAfter("Published")).Should().Be(1);
+        (await CountAfter("Draft")).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Publishing_again_after_a_retitle_keeps_the_first_address()
+    {
+        var author = await _fixture.AddUserAsync();
+        var draft = await _service.CreateDraftAsync(NewRequest("Original Name"), author.Id);
+        await _service.SetStatusAsync(draft.Id, "Published", author.Id);
+        await _service.SetStatusAsync(draft.Id, "Inactive", author.Id);
+        await _service.UpdateAsync(draft.Id, new UpdatePostRequest("A New Name Entirely", null, TestDatabase.Document("Body."), null, []), author.Id);
+
+        var again = await _service.SetStatusAsync(draft.Id, "published", author.Id);
+
+        again.Slug.Should().Be("original-name");
+    }
+
+    [Theory]
+    [InlineData("Unlisted")]
+    [InlineData("2")]
+    [InlineData("")]
+    [InlineData(null)]
+    public async Task An_unknown_state_is_rejected(string? status)
+    {
+        var author = await _fixture.AddUserAsync();
+        var draft = await _service.CreateDraftAsync(NewRequest(), author.Id);
+
+        var act = () => _service.SetStatusAsync(draft.Id, status!, author.Id);
+
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*Draft, Published or Inactive*");
+    }
+
+    [Fact]
+    public async Task Only_the_author_can_change_a_posts_state()
+    {
+        var author = await _fixture.AddUserAsync("author");
+        var other = await _fixture.AddUserAsync("other");
+        var draft = await _service.CreateDraftAsync(NewRequest(), author.Id);
+
+        var act = () => _service.SetStatusAsync(draft.Id, "Published", other.Id);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task A_body_that_is_not_a_post_document_is_refused_on_create_and_on_update()
+    {
+        var author = await _fixture.AddUserAsync();
+        const string bad = """{"type":"sections","content":[{"type":"scriptSection"}]}""";
+        var draft = await _service.CreateDraftAsync(NewRequest(), author.Id);
+
+        var create = () => _service.CreateDraftAsync(new CreatePostRequest("Title", null, bad, null, []), author.Id);
+        var update = () => _service.UpdateAsync(draft.Id, new UpdatePostRequest("Title", null, bad, null, []), author.Id);
+
+        await create.Should().ThrowAsync<DomainException>();
+        await update.Should().ThrowAsync<DomainException>();
+        (await _fixture.Posts.GetByIdAsync(draft.Id))!.ContentJson.Should().NotContain("scriptSection");
+    }
+
+    [Fact]
     public async Task Editing_a_post_snapshots_the_previous_body_as_a_revision()
     {
         var author = await _fixture.AddUserAsync();

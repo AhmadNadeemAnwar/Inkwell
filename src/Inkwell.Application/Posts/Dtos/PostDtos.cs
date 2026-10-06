@@ -52,6 +52,9 @@ public sealed record PostDetailDto(
     IReadOnlyList<TagDto> Tags,
     ViewerStateDto? Viewer);
 
+/// <summary>Draft, Published or Inactive.</summary>
+public sealed record SetPostStatusRequest(string Status);
+
 public sealed record CreatePostRequest(
     string Title,
     string? Subtitle,

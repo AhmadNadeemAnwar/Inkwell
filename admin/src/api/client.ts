@@ -1,12 +1,18 @@
 import type {
   AdminComment, AdminPost, AdminTag, Collection, Frontmatter, Paged, PortfolioEntry, PortfolioStatus,
-  PortfolioSummary, Session, Stats,
+  PortfolioSummary, PostDraft, PostInput, PostStatus, PostTag, Session, Stats, StoredImage,
 } from './types'
 
 // Empty in development (Vite proxies /api); the production build bakes in the API's absolute URL.
 const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '').replace(/\/+$/, '')
 
 const SESSION_KEY = 'inkwell.admin.session'
+
+/** Where the browser fetches an uploaded picture from. */
+export const imageUrl = (id: string) => `${API_BASE}/api/v1/images/${id}`
+
+/** A stored picture's path is relative to the API; a link to a picture elsewhere is used as it is. */
+export const assetUrl = (pathOrUrl: string) => (pathOrUrl.startsWith('/api/v1/images/') ? `${API_BASE}${pathOrUrl}` : pathOrUrl)
 
 /**
  * The session lives in sessionStorage, not localStorage: it disappears when the tab closes, so a
@@ -32,6 +38,21 @@ export function saveSession(session: Session | null) {
   }
 }
 
+/**
+ * The signed-in person's handle, read from the session token. Only used to decide which posts get
+ * an Edit button; the API is what actually enforces that you can only edit your own.
+ */
+export function sessionHandle(session: Session | null): string | null {
+  try {
+    const payload = session?.token.split('.')[1]
+    if (!payload) return null
+    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { handle?: unknown }
+    return typeof claims.handle === 'string' ? claims.handle : null
+  } catch {
+    return null
+  }
+}
+
 export class ApiError extends Error {
   status: number
 
@@ -50,14 +71,16 @@ export function setSessionLostHandler(handler: (() => void) | null) {
 
 async function request<T>(method: string, path: string, body?: unknown, auth = true): Promise<T> {
   const session = loadSession()
+  // A form (a file upload) sets its own content type, including the boundary between its parts.
+  const isForm = body instanceof FormData
 
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
       ...(auth && session ? { Authorization: `Bearer ${session.token}` } : {}),
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   })
 
   if (response.status === 204) return undefined as T
@@ -102,8 +125,21 @@ export const api = {
 
   posts: (params: { status?: string; q?: string; pageNumber?: number; pageSize?: number }) =>
     request<Paged<AdminPost>>('GET', `/api/v1/admin/posts${query(params)}`),
-  unpublishPost: (id: string) => request<void>('POST', `/api/v1/admin/posts/${id}/unpublish`),
+  /** Any post, whoever wrote it. */
+  adminSetPostStatus: (id: string, status: PostStatus) => request<void>('POST', `/api/v1/admin/posts/${id}/status`, { status }),
   deletePost: (id: string) => request<void>('DELETE', `/api/v1/admin/posts/${id}`),
+
+  // Writing uses the same routes as the public site: these act on your own posts only.
+  postForEdit: (id: string) => request<PostDraft>('GET', `/api/v1/posts/${id}/edit`),
+  createPost: (body: PostInput) => request<PostDraft>('POST', '/api/v1/posts', body),
+  updatePost: (id: string, body: PostInput) => request<PostDraft>('PUT', `/api/v1/posts/${id}`, body),
+  setPostStatus: (id: string, status: PostStatus) => request<PostDraft>('POST', `/api/v1/posts/${id}/status`, { status }),
+  uploadImage: (file: Blob, name: string) => {
+    const form = new FormData()
+    form.append('file', file, name)
+    return request<StoredImage>('POST', '/api/v1/images', form)
+  },
+  suggestTags: (q: string) => request<PostTag[]>('GET', `/api/v1/tags/suggest${query({ q })}`),
 
   comments: (pageNumber = 1) => request<Paged<AdminComment>>('GET', `/api/v1/admin/comments${query({ pageNumber, pageSize: 25 })}`),
   deleteComment: (id: string) => request<void>('DELETE', `/api/v1/admin/comments/${id}`),

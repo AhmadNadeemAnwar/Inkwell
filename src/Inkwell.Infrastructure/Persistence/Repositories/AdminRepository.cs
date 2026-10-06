@@ -19,7 +19,7 @@ public class AdminRepository : IAdminRepository
         // Sequential on purpose: a DbContext does not support concurrent queries.
         var published = await _db.Posts.CountAsync(p => p.Status == PostStatus.Published, ct);
         var drafts = await _db.Posts.CountAsync(p => p.Status == PostStatus.Draft, ct);
-        var unlisted = await _db.Posts.CountAsync(p => p.Status == PostStatus.Unlisted, ct);
+        var inactive = await _db.Posts.CountAsync(p => p.Status == PostStatus.Inactive, ct);
         var users = await _db.Users.CountAsync(ct);
         var comments = await _db.Comments.CountAsync(c => !c.IsDeleted, ct);
         var claps = await _db.Posts.SumAsync(p => (long)p.ClapCount, ct);
@@ -49,7 +49,7 @@ public class AdminRepository : IAdminRepository
             .ToListAsync(ct);
 
         return new AdminStats(
-            published, drafts, unlisted, users, comments, claps, views, bookmarks, tags,
+            published, drafts, inactive, users, comments, claps, views, bookmarks, tags,
             topByViews, topByClaps,
             recent.Where(d => d.HasValue).Select(d => d!.Value).ToList());
     }

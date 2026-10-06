@@ -1,5 +1,6 @@
 using Inkwell.Application.Admin.Dtos;
 using Inkwell.Application.Common;
+using Inkwell.Application.Posts;
 using Inkwell.Domain.Common;
 using Inkwell.Domain.Entities;
 using Inkwell.Domain.Enums;
@@ -15,6 +16,7 @@ public interface IAdminService
 
     Task<PagedResult<AdminPostDto>> GetPostsAsync(string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default);
     Task UnpublishPostAsync(Guid postId, string admin, CancellationToken ct = default);
+    Task SetPostStatusAsync(Guid postId, string status, string admin, CancellationToken ct = default);
     Task DeletePostAsync(Guid postId, string admin, CancellationToken ct = default);
 
     Task<PagedResult<AdminCommentDto>> GetCommentsAsync(int pageNumber, int pageSize, CancellationToken ct = default);
@@ -71,7 +73,7 @@ public sealed class AdminService : IAdminService
             .ToList();
 
         return new AdminStatsDto(
-            stats.PublishedPosts, stats.DraftPosts, stats.UnlistedPosts, stats.Users, stats.Comments,
+            stats.PublishedPosts, stats.DraftPosts, stats.InactivePosts, stats.Users, stats.Comments,
             stats.Claps, stats.Views, stats.Bookmarks, stats.Tags,
             stats.TopByViews.Select(ToDto).ToList(),
             stats.TopByClaps.Select(ToDto).ToList(),
@@ -80,13 +82,7 @@ public sealed class AdminService : IAdminService
 
     public async Task<PagedResult<AdminPostDto>> GetPostsAsync(string? status, string? search, int pageNumber, int pageSize, CancellationToken ct = default)
     {
-        PostStatus? parsed = null;
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            if (!Enum.TryParse<PostStatus>(status, ignoreCase: true, out var value))
-                throw new DomainException("Status must be Draft, Published or Unlisted.");
-            parsed = value;
-        }
+        PostStatus? parsed = string.IsNullOrWhiteSpace(status) ? null : PostStatusChange.Parse(status);
 
         var page = await _admin.SearchPostsAsync(parsed, search, pageNumber, pageSize, ct);
         return page.Map(p => new AdminPostDto(
@@ -95,20 +91,19 @@ public sealed class AdminService : IAdminService
             p.PostTags.Select(pt => pt.Tag.Name).OrderBy(n => n).ToList()));
     }
 
-    public async Task UnpublishPostAsync(Guid postId, string admin, CancellationToken ct = default)
+    public Task UnpublishPostAsync(Guid postId, string admin, CancellationToken ct = default) =>
+        SetPostStatusAsync(postId, nameof(PostStatus.Inactive), admin, ct);
+
+    public async Task SetPostStatusAsync(Guid postId, string status, string admin, CancellationToken ct = default)
     {
+        var target = PostStatusChange.Parse(status);
         var post = await _posts.GetByIdAsync(postId, ct) ?? throw new NotFoundException(nameof(Post), postId);
+        var from = post.Status;
 
-        var wasPublished = post.Status == PostStatus.Published;
-        post.Unpublish();
-
-        if (wasPublished)
-        {
-            foreach (var postTag in post.PostTags) postTag.Tag?.DecrementPostCount();
-        }
+        await PostStatusChange.ApplyAsync(post, target, _posts, ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
-        _logger.LogInformation("Admin {Admin} took down post {PostId} ({Title})", admin, post.Id, post.Title);
+        _logger.LogInformation("Admin {Admin} changed post {PostId} ({Title}) from {From} to {To}", admin, post.Id, post.Title, from, target);
     }
 
     public async Task DeletePostAsync(Guid postId, string admin, CancellationToken ct = default)

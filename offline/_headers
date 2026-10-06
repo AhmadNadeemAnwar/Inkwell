@@ -1,0 +1,12 @@
+# Served while a site is paused. Deployed in place of the real build with:
+#   npx.cmd wrangler deploy --assets ../offline     (from web/ or admin/)
+# Redeploy normally (npm run build, then wrangler deploy) to bring the site back.
+
+/*
+  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store

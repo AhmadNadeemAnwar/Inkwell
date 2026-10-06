@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { isHttpsUrl, isSafeLink } from '../lib/safeUrl'
+import { isHttpsUrl, isImageId, isSafeLink, safeHref, storedImageUrl } from '../lib/safeUrl'
 
 interface Mark {
   type: string
@@ -14,12 +14,15 @@ interface Node {
   content?: Node[]
 }
 
+const text = (value: unknown): string => (typeof value === 'string' ? value : '')
+
 /**
- * Renders a stored ProseMirror document as React elements.
+ * Renders a stored post body as React elements.
  *
- * Deliberately does not use dangerouslySetInnerHTML: only the node and mark types listed
- * below are rendered, so a crafted document cannot inject markup or script into a reader's
- * page. Anything unrecognised degrades to its plain text.
+ * A body is either one rich-text document, or a list of sections (text, an uploaded picture, a
+ * list of sources). Deliberately does not use dangerouslySetInnerHTML: only the node and mark
+ * types listed below are rendered, so a crafted document cannot inject markup or script into a
+ * reader's page. Anything unrecognised degrades to its plain text.
  */
 export function RichText({ contentJson }: { contentJson: string }) {
   let doc: Node
@@ -29,15 +32,17 @@ export function RichText({ contentJson }: { contentJson: string }) {
     return <p className="muted">This post could not be displayed.</p>
   }
 
-  return <div className="prose">{renderChildren(doc.content)}</div>
+  return <div className="prose">{renderChildren(doc?.content)}</div>
 }
 
 function renderChildren(nodes: Node[] | undefined): ReactNode {
-  if (!nodes) return null
+  if (!Array.isArray(nodes)) return null
   return nodes.map((node, index) => <RenderNode key={index} node={node} />)
 }
 
 function RenderNode({ node }: { node: Node }): ReactNode {
+  if (typeof node !== 'object' || node === null) return null
+
   switch (node.type) {
     case 'text':
       return applyMarks(node.text ?? '', node.marks)
@@ -79,6 +84,42 @@ function RenderNode({ node }: { node: Node }): ReactNode {
       return <img src={src} alt={typeof node.attrs?.alt === 'string' ? node.attrs.alt : ''} referrerPolicy="no-referrer" loading="lazy" />
     }
 
+    case 'imageSection': {
+      // Only a picture uploaded to this site is shown; the id is checked so it cannot point anywhere else.
+      const imageId = text(node.attrs?.imageId)
+      if (!isImageId(imageId)) return null
+      const caption = text(node.attrs?.caption)
+      return (
+        <figure className="prose__figure">
+          <img src={storedImageUrl(imageId)} alt={text(node.attrs?.alt)} loading="lazy" decoding="async" />
+          {caption && <figcaption>{caption}</figcaption>}
+        </figure>
+      )
+    }
+
+    case 'referencesSection': {
+      const raw = Array.isArray(node.attrs?.items) ? (node.attrs.items as unknown[]) : []
+      const items = raw
+        .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+        .map((item) => ({ title: text(item.title).trim(), href: safeHref(text(item.url)) }))
+        .filter((item) => item.title !== '')
+      if (items.length === 0) return null
+
+      return (
+        <section className="prose__references" aria-label="References">
+          <h2>References</h2>
+          <ol>
+            {items.map((item, index) => (
+              <li key={index}>
+                {item.href ? <a href={item.href} target="_blank" rel="noopener noreferrer nofollow">{item.title}</a> : item.title}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )
+    }
+
+    // A text section is only a grouping; its blocks render exactly as they would in a single document.
     default:
       return renderChildren(node.content)
   }

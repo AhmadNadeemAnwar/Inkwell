@@ -11,7 +11,7 @@ public sealed record TopPostDto(Guid Id, string Title, string? Slug, int Views, 
 public sealed record AdminStatsDto(
     int PublishedPosts,
     int DraftPosts,
-    int UnlistedPosts,
+    int InactivePosts,
     int Users,
     int Comments,
     long Claps,

@@ -1,4 +1,8 @@
 import type { ReactNode } from 'react'
+import type { PostStatus } from '../api/types'
+
+/** What each state is called on screen. "Inactive" is the stored name; people read "Not active". */
+export const statusLabels: Record<PostStatus, string> = { Draft: 'Draft', Published: 'Published', Inactive: 'Not active' }
 
 export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return <div className="spinner">{label}</div>

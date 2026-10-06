@@ -50,6 +50,14 @@ public class PostgresTranslationTests : IDisposable
         }));
 
     [Fact]
+    public Task Image_lookup_and_storage_total_translate() =>
+        AssertTranslatesAsync(async () =>
+        {
+            await new ImageRepository(_db).GetTotalBytesAsync();
+            await new ImageRepository(_db).GetAsync(Guid.NewGuid());
+        });
+
+    [Fact]
     public Task Personal_feed_translates() =>
         AssertTranslatesAsync(() => new PostRepository(_db).GetPersonalFeedAsync(Guid.NewGuid(), 1, 20));
 

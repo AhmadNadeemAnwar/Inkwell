@@ -5,7 +5,7 @@ A private site at **https://admin.ahmadnadeem.dev** for running Inkwell and edit
 | Section | What you can do |
 |---|---|
 | Dashboard | Totals, a 30-day publishing chart, most viewed and most clapped posts |
-| Posts | Every post including drafts: search, filter, **take down**, **delete** |
+| Posts | **Write, edit and publish** your own posts. Every post including drafts: search, filter, **take down**, **delete** |
 | Comments | Every comment across the site: **remove** |
 | Topics | **Rename**, **merge** and **delete** tags |
 | Portfolio | Create, edit and delete your site's **blog**, **projects** and **updates** (Markdown, with a live preview) |
@@ -131,6 +131,32 @@ email and the current 6-digit code.
 
 ## Using it
 
+**Writing:** *New post* (on the Dashboard and the Posts page) opens the editor; *Edit* appears beside
+every post that is yours.
+- A post is a list of **sections**. *Add a section* offers **Text**, **Image** and **References**.
+  Each section has arrows to move it up or down, and a cross to delete it.
+- **Image:** choose a picture from your device. It is shrunk in the browser (1600 pixels on its
+  longer side at most) and stored in the site's own database, so no other service is involved.
+  JPEG, PNG and WebP only. *Describe the picture* is read aloud to people who cannot see it.
+- **References:** a numbered list of sources. Each needs a title; the link is optional.
+- A post that readers cannot see saves itself a few seconds after you stop typing. A published post
+  is live, so changes to it wait until you press *Save changes*.
+
+**Post status:** a post is in exactly one of three states, changed from the *Status* menu in the
+editor or in the Posts list.
+
+| Status | Who can see it |
+|---|---|
+| Draft | Only you. Not finished yet. |
+| Published | Everyone. The first publish fixes its address for good. |
+| Not active | Only you. Switched off; it keeps its address, so publishing again restores the same link. |
+
+**Image storage allowance:** the free database holds 0.5 GB in total. Images are capped at 300 MB
+together, about 1,500 pictures at a typical 200 KB each. When the cap is reached, uploads are
+refused with a clear message; nothing is charged and nothing already stored is affected.
+- Unsaved writing is also kept in your browser. If the 2-hour session ends or the tab closes
+  mid-sentence, reopen the post and choose *Restore it*.
+
 **Posts** and **Comments** act immediately and always ask first. *Take down* returns a post to draft
 (its author can republish it); *Delete* is permanent.
 
@@ -189,6 +215,11 @@ Admin actions are recorded in the API's logs (Render → Logs) with your email a
   server. They reset when Render restarts the service, which only gives an attacker a fresh window,
   not access.
 - The portfolio editor handles Markdown and the fields in your schema. It doesn't upload images; link to
-  images by URL for now.
+  images by URL for now. (Inkwell posts do upload images.)
+- A picture removed from a post stays in the database; there is no screen yet to delete unused ones.
+- Pictures are served by the API on Render, so the first one after the server has been idle is slow.
+- To try the portal on your own machine, the API's development settings include a throwaway admin
+  (`maya@example.com`) and authenticator secret. They exist only in `appsettings.Development.json` and
+  are never used by the deployed site.
 - If you change `src/content.config.ts` in the portfolio, update the matching rules in
   `src/Inkwell.Application/Portfolio/PortfolioContent.cs` and `admin/src/portfolio/schema.ts`.

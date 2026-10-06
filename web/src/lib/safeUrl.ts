@@ -4,6 +4,21 @@
  * prefix test such as startsWith('/') lets protocol-relative "//evil.example" through.
  */
 
+import { API_BASE } from '../api/client'
+
+const IMAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const STORED_IMAGE_PATH = /^\/api\/v1\/images\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
+
+/** The id of a picture uploaded to this site. Checked before it is put in an address, so it can only ever name a picture. */
+export function isImageId(value: string | null | undefined): value is string {
+  return typeof value === 'string' && IMAGE_ID.test(value)
+}
+
+/** Where the browser fetches an uploaded picture from: always the API, whatever the id. */
+export function storedImageUrl(imageId: string): string {
+  return `${API_BASE}/api/v1/images/${imageId}`
+}
+
 function parse(url: string | null | undefined): URL | null {
   if (!url) return null
   try {
@@ -41,7 +56,13 @@ export function safeHref(url: string | null | undefined): string | undefined {
   return isHttpUrl(url) ? url!.trim() : undefined
 }
 
-/** Returns the URL if it may be used as an image source, otherwise undefined. */
+/**
+ * Returns an address that may be used as an image source, otherwise undefined: a picture uploaded
+ * to this site (stored as a path on the API), or an https link elsewhere.
+ */
 export function safeImageSrc(url: string | null | undefined): string | undefined {
+  const stored = url ? STORED_IMAGE_PATH.exec(url.trim()) : null
+  if (stored) return storedImageUrl(stored[1])
+
   return isHttpsUrl(url) ? url!.trim() : undefined
 }

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { DailyCount, TopPost } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
@@ -10,6 +11,7 @@ export function DashboardPage() {
     <>
       <PageHeader title="Dashboard">
         <button className="btn" onClick={stats.reload} disabled={stats.loading}>Refresh</button>
+        <Link className="btn btn--primary" to="/posts/new">New post</Link>
       </PageHeader>
 
       {stats.error && <ErrorNote message={stats.error} onRetry={stats.reload} />}
@@ -19,7 +21,7 @@ export function DashboardPage() {
         <>
           <section className="tiles" aria-label="Totals">
             <StatTile label="Published posts" value={formatNumber(stats.data.publishedPosts)} />
-            <StatTile label="Drafts" value={formatNumber(stats.data.draftPosts)} hint={stats.data.unlistedPosts ? `${stats.data.unlistedPosts} unlisted` : undefined} />
+            <StatTile label="Drafts" value={formatNumber(stats.data.draftPosts)} hint={stats.data.inactivePosts ? `${stats.data.inactivePosts} not active` : undefined} />
             <StatTile label="Views" value={formatNumber(stats.data.views)} />
             <StatTile label="Claps" value={formatNumber(stats.data.claps)} />
             <StatTile label="Comments" value={formatNumber(stats.data.comments)} />

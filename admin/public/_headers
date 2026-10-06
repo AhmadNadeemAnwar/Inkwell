@@ -3,11 +3,11 @@
 # connect-src names the API origin. If the Render service is renamed or recreated, change it here
 # and in .env.production together.
 #
-# The admin app renders everything as text (no raw HTML), loads nothing from other sites, and may
-# not be framed. 'unsafe-inline' is only for style="" attributes, never for scripts.
+# The admin app renders everything as text (no raw HTML) and may not be framed. The only thing it
+# loads from another site is uploaded pictures, which come from the API (img-src names it). 'unsafe-inline' is only for style="" attributes, never for scripts.
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://inkwell-zpbc.onrender.com https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://inkwell-zpbc.onrender.com; font-src 'self'; connect-src 'self' https://inkwell-zpbc.onrender.com https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer

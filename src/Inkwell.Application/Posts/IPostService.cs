@@ -8,7 +8,11 @@ public interface IPostService
     Task<PostDetailDto> CreateDraftAsync(CreatePostRequest request, Guid authorId, CancellationToken ct = default);
     Task<PostDetailDto> UpdateAsync(Guid id, UpdatePostRequest request, Guid authorId, CancellationToken ct = default);
     Task<PostDetailDto> PublishAsync(Guid id, Guid authorId, CancellationToken ct = default);
+    /// <summary>Takes a post down: it becomes Inactive and keeps its address.</summary>
     Task<PostDetailDto> UnpublishAsync(Guid id, Guid authorId, CancellationToken ct = default);
+
+    /// <summary>Moves a post to Draft, Published or Inactive.</summary>
+    Task<PostDetailDto> SetStatusAsync(Guid id, string status, Guid authorId, CancellationToken ct = default);
     Task DeleteAsync(Guid id, Guid authorId, CancellationToken ct = default);
 
     /// <summary>Public read by canonical slug. Increments the view counter.</summary>

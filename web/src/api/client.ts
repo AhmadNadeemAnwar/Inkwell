@@ -6,7 +6,7 @@ const TOKEN_KEY = 'inkwell.token'
 
 // Empty in development, where Vite proxies /api to the local API. In production the SPA and the
 // API live on different origins, so the build bakes in the API's absolute URL.
-const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '').replace(/\/+$/, '')
+export const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '').replace(/\/+$/, '')
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
@@ -93,28 +93,15 @@ export const api = {
   feed: (pageNumber = 1, pageSize = 20) =>
     request<Paged<PostSummary>>('GET', `/api/v1/posts/feed${query({ pageNumber, pageSize })}`),
 
-  drafts: (pageNumber = 1, pageSize = 20) =>
-    request<Paged<PostSummary>>('GET', `/api/v1/posts/drafts${query({ pageNumber, pageSize })}`),
-
   bookmarks: (pageNumber = 1, pageSize = 20) =>
     request<Paged<PostSummary>>('GET', `/api/v1/posts/bookmarks${query({ pageNumber, pageSize })}`),
 
   post: (slug: string) => request<PostDetail>('GET', `/api/v1/posts/${encodeURIComponent(slug)}`),
 
-  postForEdit: (id: string) => request<PostDetail>('GET', `/api/v1/posts/${id}/edit`),
 
   related: (id: string, limit = 4) =>
     request<PostSummary[]>('GET', `/api/v1/posts/${id}/related${query({ limit })}`),
 
-  createPost: (body: { title: string; subtitle: string | null; contentJson: string; coverImageUrl: string | null; tags: string[] }) =>
-    request<PostDetail>('POST', '/api/v1/posts', body),
-
-  updatePost: (id: string, body: { title: string; subtitle: string | null; contentJson: string; coverImageUrl: string | null; tags: string[] }) =>
-    request<PostDetail>('PUT', `/api/v1/posts/${id}`, body),
-
-  publishPost: (id: string) => request<PostDetail>('POST', `/api/v1/posts/${id}/publish`),
-  unpublishPost: (id: string) => request<PostDetail>('POST', `/api/v1/posts/${id}/unpublish`),
-  deletePost: (id: string) => request<void>('DELETE', `/api/v1/posts/${id}`),
 
   clap: (id: string, amount = 1) =>
     request<{ postClapCount: number; yourClapCount: number }>('POST', `/api/v1/posts/${id}/claps${query({ amount })}`),

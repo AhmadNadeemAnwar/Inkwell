@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react'
 import type { ReactElement } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
@@ -11,6 +12,10 @@ import { PortfolioEditPage } from './pages/PortfolioEditPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { PostsPage } from './pages/PostsPage'
 import { TagsPage } from './pages/TagsPage'
+
+// The editor is by far the largest part of the app, so it loads only when a post is opened.
+const PostEditPage = lazy(() => import('./pages/PostEditPage').then((m) => ({ default: m.PostEditPage })))
+const editor = <Suspense fallback={<Spinner label="Opening the editor…" />}><PostEditPage /></Suspense>
 
 /** Everything except the sign-in page needs a verified admin session. */
 function RequireSession({ children }: { children: ReactElement }) {
@@ -40,6 +45,8 @@ export default function App() {
             <Route element={<RequireSession><Layout /></RequireSession>}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/posts" element={<PostsPage />} />
+              <Route path="/posts/new" element={editor} />
+              <Route path="/posts/:id/edit" element={editor} />
               <Route path="/comments" element={<CommentsPage />} />
               <Route path="/tags" element={<TagsPage />} />
               <Route path="/portfolio" element={<Navigate to="/portfolio/projects" replace />} />

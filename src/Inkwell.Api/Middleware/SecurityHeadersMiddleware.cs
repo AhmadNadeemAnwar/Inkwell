@@ -7,6 +7,9 @@ namespace Inkwell.Api.Middleware;
 /// </summary>
 public sealed class SecurityHeadersMiddleware
 {
+    /// <summary>Set on a request by the endpoint that serves stored pictures, which are public and never change.</summary>
+    public const string PublicImageKey = "Inkwell.PublicImage";
+
     private readonly RequestDelegate _next;
     private readonly bool _allowSwaggerUi;
 
@@ -27,7 +30,14 @@ public sealed class SecurityHeadersMiddleware
             headers["X-Frame-Options"] = "DENY";
 
             var isSwagger = _allowSwaggerUi && context.Request.Path.StartsWithSegments("/swagger");
-            if (!isSwagger)
+            if (context.Items.ContainsKey(PublicImageKey) && context.Response.StatusCode == StatusCodes.Status200OK)
+            {
+                // A picture may be shown by the sites that embed it and kept by browsers; it can still
+                // load nothing itself. The endpoint has already set its own Cache-Control.
+                headers["Content-Security-Policy"] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'";
+                headers["Cross-Origin-Resource-Policy"] = "cross-origin";
+            }
+            else if (!isSwagger)
             {
                 headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'";
                 headers["Cache-Control"] = "no-store";

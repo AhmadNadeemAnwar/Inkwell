@@ -4,6 +4,7 @@ using Inkwell.Application.Auth;
 using Inkwell.Application.Comments;
 using Inkwell.Application.Engagement;
 using Inkwell.Application.Portfolio;
+using Inkwell.Application.Images;
 using Inkwell.Application.Posts;
 using Inkwell.Application.Tags;
 using Inkwell.Application.Users;
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IAdminAuthService, AdminAuthService>();
         services.AddScoped<IPortfolioService, PortfolioService>();
+        services.AddScoped<IImageService, ImageService>();
 
         services.AddValidatorsFromAssemblyContaining<AuthService>();
 

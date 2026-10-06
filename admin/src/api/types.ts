@@ -31,7 +31,7 @@ export interface DailyCount {
 export interface Stats {
   publishedPosts: number
   draftPosts: number
-  unlistedPosts: number
+  inactivePosts: number
   users: number
   comments: number
   claps: number
@@ -43,7 +43,7 @@ export interface Stats {
   publishedLast30Days: DailyCount[]
 }
 
-export type PostStatus = 'Draft' | 'Published' | 'Unlisted'
+export type PostStatus = 'Draft' | 'Published' | 'Inactive'
 
 export interface AdminPost {
   id: string
@@ -57,6 +57,41 @@ export interface AdminPost {
   views: number
   claps: number
   comments: number
+  tags: string[]
+}
+
+export interface PostTag {
+  id: string
+  name: string
+  slug: string
+  postCount: number
+}
+
+/** A post as its author sees it in the editor. */
+export interface PostDraft {
+  id: string
+  slug: string | null
+  title: string
+  subtitle: string | null
+  contentJson: string
+  coverImageUrl: string | null
+  status: PostStatus
+  tags: PostTag[]
+}
+
+/** A picture stored by the API. `path` is what a post keeps; it is relative to the API. */
+export interface StoredImage {
+  id: string
+  path: string
+  contentType: string
+  size: number
+}
+
+export interface PostInput {
+  title: string
+  subtitle: string | null
+  contentJson: string
+  coverImageUrl: string | null
   tags: string[]
 }
 

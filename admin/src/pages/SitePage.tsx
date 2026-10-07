@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import type { CSSProperties, FormEvent } from 'react'
 import { api } from '../api/client'
 import type { Category } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { useConfirm, useToast } from '../components/feedback'
 import { Empty, ErrorNote, PageHeader, Spinner, formatNumber } from '../components/ui'
+import { backgroundProblem, paletteFrom, toHex } from '../lib/palette'
+import type { ThemeColors } from '../lib/palette'
 
 export const MAX_CATEGORIES = 12
 export const MAX_CATEGORY_NAME = 40
@@ -17,6 +19,16 @@ export const themeLabels: Record<string, { name: string; note: string; swatches:
 
 export function describeTheme(theme: string) {
   return themeLabels[theme] ?? { name: theme, note: '', swatches: [] }
+}
+
+/** The owner's own two colours are a theme too, but are set with pickers rather than chosen from the list. */
+export const CUSTOM_THEME = 'custom'
+
+/** What the Save button for custom colours should do, given what is picked and what the site wears now. */
+export function customColoursState(picked: ThemeColors, current: { theme: string; colors: ThemeColors }) {
+  const problem = backgroundProblem(picked.background)
+  const inUse = current.theme === CUSTOM_THEME && current.colors.main === picked.main && current.colors.background === picked.background
+  return { problem, inUse, canSave: problem === null && !inUse }
 }
 
 /** Why a category name cannot be used, or null if it can. `others` are the names already taken by other categories. */
@@ -44,11 +56,11 @@ function ThemePanel() {
   const settings = useAsync(() => api.settings(), [])
   const [saving, setSaving] = useState<string | null>(null)
 
-  async function choose(theme: string) {
+  async function choose(theme: string, colors?: ThemeColors) {
     setSaving(theme)
     try {
-      await api.updateSettings(theme)
-      notify(`Theme changed to ${describeTheme(theme).name}. Readers see it the next time they open the site.`)
+      await api.updateSettings(theme, colors)
+      notify(`Theme changed to ${colors ? 'your own colours' : describeTheme(theme).name}. Readers see it the next time they open the site.`)
       settings.reload()
     } catch (err) {
       notify(err instanceof Error ? err.message : 'The theme could not be changed.', 'error')
@@ -67,7 +79,7 @@ function ThemePanel() {
 
       {settings.data && (
         <div className="themes" role="radiogroup" aria-label="Theme">
-          {settings.data.availableThemes.map((theme) => {
+          {settings.data.availableThemes.filter((theme) => theme !== CUSTOM_THEME).map((theme) => {
             const info = describeTheme(theme)
             const active = settings.data!.theme === theme
             return (
@@ -83,7 +95,74 @@ function ThemePanel() {
           })}
         </div>
       )}
+
+      {settings.data?.availableThemes.includes(CUSTOM_THEME) && (
+        <CustomColours key={`${settings.data.theme}-${settings.data.colors.main}-${settings.data.colors.background}`}
+          current={settings.data} saving={saving !== null} onSave={(colors) => void choose(CUSTOM_THEME, colors)} />
+      )}
     </section>
+  )
+}
+
+/** The palette as React wants it: the colour variables as they are, and the one real CSS property under its React name. */
+function previewStyle(colors: ThemeColors): CSSProperties {
+  const { 'color-scheme': colorScheme, ...variables } = paletteFrom(colors)
+  return { ...variables, colorScheme } as CSSProperties
+}
+
+function CustomColours({ current, saving, onSave }: {
+  current: { theme: string; colors: ThemeColors }
+  saving: boolean
+  onSave: (colors: ThemeColors) => void
+}) {
+  const [picked, setPicked] = useState<ThemeColors>(current.colors)
+  const { problem, inUse, canSave } = customColoursState(picked, current)
+
+  function pick(part: keyof ThemeColors, value: string) {
+    const hex = toHex(value)
+    if (hex) setPicked({ ...picked, [part]: hex })
+  }
+
+  return (
+    <div className={`custom-theme${inUse ? ' custom-theme--active' : ''}`}>
+      <h3>Your own colours {inUse && <span className="badge badge--good">In use</span>}</h3>
+      <p className="muted">
+        Pick two colours. The text, borders and button shades are worked out from them so the site always stays readable.
+        Readers can also choose colours for themselves with the palette button on the site; that only changes their own device.
+      </p>
+
+      <div className="custom-theme__body">
+        <div className="custom-theme__pickers">
+          <label>
+            <span>Main colour<small>Header, links and buttons</small></span>
+            <input type="color" value={picked.main} onChange={(e) => pick('main', e.target.value)} />
+          </label>
+          <label>
+            <span>Background<small>The page behind the text</small></span>
+            <input type="color" value={picked.background} onChange={(e) => pick('background', e.target.value)} />
+          </label>
+          {problem && <p className="custom-theme__problem" role="alert">{problem}</p>}
+          <button type="button" className="btn btn--primary" disabled={!canSave || saving} onClick={() => onSave(picked)}>
+            {saving ? 'Saving…' : inUse ? 'These colours are in use' : 'Use these colours'}
+          </button>
+        </div>
+
+        {!problem && (
+          <div className="theme-preview" style={previewStyle(picked)} aria-label="Preview of the public site">
+            <div className="theme-preview__header"><strong>Inkwell</strong><span>Search articles</span></div>
+            <div className="theme-preview__page">
+              <p className="theme-preview__title">A post title</p>
+              <p className="theme-preview__meta">7 October · 4 min read</p>
+              <p>Body text looks like this, with <a>a link</a> in it.</p>
+              <div className="theme-preview__card">
+                <span className="theme-preview__button">Button</span>
+                <span className="theme-preview__chip">Selected</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

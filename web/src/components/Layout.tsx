@@ -4,6 +4,7 @@ import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { PORTFOLIO_URL } from '../lib/site'
 import { useSite } from '../lib/siteContext'
 import { SubscribeForm } from './SubscribeForm'
+import { ThemePicker } from './ThemePicker'
 
 export function Layout() {
   const navigate = useNavigate()
@@ -32,11 +33,14 @@ export function Layout() {
             />
           </form>
 
-          {PORTFOLIO_URL && (
-            <nav className="header__nav" aria-label="Elsewhere">
-              <a className="btn btn--ghost" href={PORTFOLIO_URL}>About the author</a>
-            </nav>
-          )}
+          <div className="header__nav">
+            {PORTFOLIO_URL && (
+              <nav aria-label="Elsewhere">
+                <a className="btn btn--ghost" href={PORTFOLIO_URL}>About the author</a>
+              </nav>
+            )}
+            <ThemePicker />
+          </div>
         </div>
       </header>
 

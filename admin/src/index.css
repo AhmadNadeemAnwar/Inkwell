@@ -437,6 +437,31 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-vi
 .theme__name { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
 .theme__note { font-size: 0.85rem; color: var(--text-muted); }
 
+.custom-theme { margin-top: 1rem; border: 1px solid var(--border-strong); border-radius: 12px; padding: 1rem; }
+.custom-theme--active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.custom-theme h3 { margin: 0 0 0.25rem; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.custom-theme__body { display: grid; grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr); gap: 1.25rem; margin-top: 0.9rem; align-items: start; }
+.custom-theme__pickers { display: grid; gap: 0.75rem; }
+.custom-theme__pickers label { display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; }
+.custom-theme__pickers small { display: block; font-size: 0.8rem; color: var(--text-muted); }
+.custom-theme__pickers input[type='color'] { width: 3.25rem; height: 2.25rem; padding: 2px; flex: none; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); cursor: pointer; }
+.custom-theme__problem { margin: 0; font-size: 0.85rem; color: var(--danger); }
+@media (max-width: 720px) { .custom-theme__body { grid-template-columns: minmax(0, 1fr); } }
+
+/* A small mock of the public site. Its colours come from the picked pair, set as variables on the element itself. */
+.theme-preview { border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; font-size: 0.9rem; }
+.theme-preview__header { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0.9rem; background: var(--chrome); color: var(--chrome-text); }
+.theme-preview__header strong { font-family: Georgia, serif; font-size: 1.05rem; }
+.theme-preview__header span { flex: 1; max-width: 11rem; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.78rem; background: var(--chrome-raised); border: 1px solid var(--chrome-border); color: var(--chrome-muted); }
+.theme-preview__page { display: grid; gap: 0.4rem; padding: 0.9rem; background: var(--bg); color: var(--text); }
+.theme-preview__page p { margin: 0; }
+.theme-preview__title { font-family: Georgia, serif; font-size: 1.15rem; font-weight: 600; }
+.theme-preview__meta { font-size: 0.78rem; color: var(--text-muted); }
+.theme-preview__page a { color: var(--accent); text-decoration: underline; }
+.theme-preview__card { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.3rem; padding: 0.6rem; background: var(--bg-raised); border: 1px solid var(--border); border-radius: 8px; }
+.theme-preview__button { padding: 0.25rem 0.7rem; border-radius: 6px; background: var(--accent); color: var(--bg); font-weight: 600; font-size: 0.8rem; }
+.theme-preview__chip { padding: 0.2rem 0.6rem; border-radius: 6px; background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent); font-size: 0.8rem; }
+
 .category-add { margin-top: 1rem; }
 .category-add input { max-width: 26rem; }
 

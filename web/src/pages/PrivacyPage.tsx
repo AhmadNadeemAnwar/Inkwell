@@ -33,6 +33,10 @@ export function PrivacyPage() {
           so that a second click can undo a clap, and so that refreshing a page does not count you as a new reader.
           Clearing this site's data in your browser removes it.
         </p>
+        <p>
+          If you use the palette button to choose your own colours, those two colours are kept in the same place so
+          the site looks the same on your next visit. They stay on your device and are never sent to the site.
+        </p>
 
         <h2>What the site records</h2>
         <ul>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { publicPostUrl } from '../components/ui'
-import { categoryNameProblem, describeTheme } from './SitePage'
+import { categoryNameProblem, customColoursState, describeTheme } from './SitePage'
 
 describe('categoryNameProblem', () => {
   const taken = ['Life and lessons', 'Technology and AI']
@@ -43,6 +43,34 @@ describe('describeTheme', () => {
 
   it('still shows a theme this page has not been told about', () => {
     expect(describeTheme('sunset')).toEqual({ name: 'sunset', note: '', swatches: [] })
+  })
+})
+
+describe('customColoursState', () => {
+  const plum = { main: '#7a1f5c', background: '#fff8f0' }
+
+  it('lets new colours be saved', () => {
+    expect(customColoursState(plum, { theme: 'blue', colors: { main: '#17694a', background: '#ffffff' } })).toEqual({ problem: null, inUse: false, canSave: true })
+  })
+
+  it('lets saved colours be switched on when a ready-made theme is in use', () => {
+    expect(customColoursState(plum, { theme: 'seagreen', colors: plum })).toMatchObject({ inUse: false, canSave: true })
+  })
+
+  it('has nothing to save when these colours are already what the site wears', () => {
+    expect(customColoursState(plum, { theme: 'custom', colors: plum })).toMatchObject({ inUse: true, canSave: false })
+  })
+
+  it('allows a change to either colour of the custom theme in use', () => {
+    expect(customColoursState({ ...plum, main: '#224488' }, { theme: 'custom', colors: plum }).canSave).toBe(true)
+    expect(customColoursState({ ...plum, background: '#ffffff' }, { theme: 'custom', colors: plum }).canSave).toBe(true)
+  })
+
+  it('will not save a background text cannot be read on', () => {
+    const state = customColoursState({ main: '#7a1f5c', background: '#808080' }, { theme: 'blue', colors: plum })
+
+    expect(state.problem).toMatch(/lighter or a darker/)
+    expect(state.canSave).toBe(false)
   })
 })
 

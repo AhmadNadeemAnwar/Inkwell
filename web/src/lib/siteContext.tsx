@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../api/client'
 import type { Category } from '../api/types'
-import { applyTheme } from './theme'
+import { applySiteLook } from './theme'
 
 interface SiteState {
   /** Categories that have at least one published post, in the owner's order. Empty until loaded. */
@@ -27,7 +27,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     api.site()
       .then((site) => {
         if (cancelled) return
-        applyTheme(site.theme)
+        applySiteLook(site.theme, site.colors)
         setState({
           categories: site.categories.filter((category) => category.postCount > 0),
           subscribeEnabled: site.subscribeEnabled === true,

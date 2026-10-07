@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <script>try{var t=localStorage.getItem("workboard-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+    <title>Workboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="top__inner">
+        <div>
+          <h1>Workboard</h1>
+          <p class="top__file" id="file"></p>
+        </div>
+        <div class="top__side">
+          <span class="save" id="save" role="status" aria-live="polite"></span>
+          <button type="button" class="button theme" id="theme" title="Switch between light and dark"></button>
+          <button type="button" class="button" id="copy" title="Copies the sentence to paste into the chat with Claude">Copy “read the workboard”</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <div id="notice" class="notice" role="alert" hidden></div>
+      <div id="board"><p class="muted">Loading…</p></div>
+    </main>
+
+    <noscript>This page needs JavaScript.</noscript>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

@@ -76,7 +76,130 @@ public class SiteServiceTests : IDisposable
     public async Task A_site_that_has_never_chosen_wears_the_default_theme()
     {
         (await _site.GetPublicAsync()).Theme.Should().Be(Themes.Blue);
-        (await _site.GetSettingsAsync()).AvailableThemes.Should().Equal(Themes.Blue, Themes.SeaGreen);
+        (await _site.GetSettingsAsync()).AvailableThemes.Should().Equal(Themes.Blue, Themes.SeaGreen, Themes.Custom);
+    }
+
+    // ---- Custom colours -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task The_owners_own_colours_reach_every_reader_and_are_recorded()
+    {
+        var saved = await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", " #7A1F5C ", "#FFF8F0"), Owner);
+
+        saved.Theme.Should().Be("custom");
+        saved.Colors.Should().Be(new ThemeColorsDto("#7a1f5c", "#fff8f0"));
+        var site = await _site.GetPublicAsync();
+        site.Theme.Should().Be("custom");
+        site.Colors.Should().Be(new ThemeColorsDto("#7a1f5c", "#fff8f0"));
+        (await HistoryAsync()).Should().ContainSingle().Which.Should().Be($"{Activity.ChangedTheme}: blue to custom (#7a1f5c on #fff8f0)");
+    }
+
+    [Fact]
+    public async Task A_ready_made_theme_sends_no_colours_to_readers()
+    {
+        (await _site.GetPublicAsync()).Colors.Should().BeNull();
+
+        await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", "#7a1f5c", "#fff8f0"), Owner);
+        await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("seagreen"), Owner);
+
+        var site = await _site.GetPublicAsync();
+        site.Theme.Should().Be("seagreen");
+        site.Colors.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task The_pickers_start_from_a_suggestion_and_then_remember_the_last_colours_saved()
+    {
+        (await _site.GetSettingsAsync()).Colors.Should().Be(ThemeColors.Suggested);
+
+        await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", "#7a1f5c", "#fff8f0"), Owner);
+        await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("blue"), Owner);
+
+        (await _site.GetSettingsAsync()).Colors.Should().Be(new ThemeColorsDto("#7a1f5c", "#fff8f0"));
+    }
+
+    [Fact]
+    public async Task Changing_only_a_colour_is_a_change_and_saving_the_same_colours_is_not()
+    {
+        await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", "#7a1f5c", "#fff8f0"), Owner);
+
+        await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", "#7A1F5C", "#fff8f0"), Owner);
+        (await HistoryAsync()).Should().HaveCount(1);
+
+        await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", "#224488", "#fff8f0"), Owner);
+
+        (await _site.GetPublicAsync()).Colors!.Main.Should().Be("#224488");
+        (await HistoryAsync()).Should().Contain($"{Activity.ChangedTheme}: custom (#7a1f5c on #fff8f0) to custom (#224488 on #fff8f0)");
+        _fixture.Db.SiteSettings.Should().HaveCount(2, "one setting for the theme and one for its colours, replaced each time");
+    }
+
+    [Theory]
+    [InlineData(null, "#ffffff")]
+    [InlineData("#17694a", null)]
+    [InlineData("green", "#ffffff")]
+    [InlineData("#17694", "#ffffff")]
+    [InlineData("#17694a", "#fff")]
+    [InlineData("#17694a", "#ffffff; background: url(https://evil.example)")]
+    [InlineData("#17694a", "#gggggg")]
+    public async Task A_custom_theme_needs_two_plain_colours(string? main, string? background)
+    {
+        await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("seagreen"), Owner);
+
+        var failure = await Record.ExceptionAsync(() => _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", main, background), Owner));
+
+        failure.Should().BeOfType<DomainException>().Which.Message.Should().Contain("colour like #17694a");
+        (await _site.GetPublicAsync()).Theme.Should().Be("seagreen");
+    }
+
+    [Theory]
+    [InlineData("#808080")]
+    [InlineData("#7a7a7a")]
+    [InlineData("#c0392b")]
+    public async Task A_background_no_text_could_be_read_on_is_refused(string background)
+    {
+        var failure = await Record.ExceptionAsync(() => _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", "#17694a", background), Owner));
+
+        failure.Should().BeOfType<DomainException>().Which.Message.Should().Contain("hard to read");
+        (await _site.GetPublicAsync()).Theme.Should().Be(Themes.Blue);
+    }
+
+    [Theory]
+    [InlineData("#ffffff")]
+    [InlineData("#fff8f0")]
+    [InlineData("#101418")]
+    [InlineData("#000000")]
+    public async Task Light_and_dark_backgrounds_are_both_allowed(string background)
+    {
+        var saved = await _site.UpdateSettingsAsync(new UpdateSiteSettingsRequest("custom", "#17694a", background), Owner);
+
+        saved.Colors.Background.Should().Be(background);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("#7a1f5c")]
+    [InlineData("#7a1f5c,#808080")]
+    [InlineData("#7a1f5c,red")]
+    [InlineData("#7a1f5c,#fff8f0,#000000")]
+    public async Task A_custom_theme_whose_stored_colours_cannot_be_used_falls_back_to_the_default(string stored)
+    {
+        await _repository.SetSettingAsync(Themes.SettingKey, Themes.Custom);
+        await _repository.SetSettingAsync(ThemeColors.SettingKey, stored);
+        await _fixture.Db.SaveChangesAsync();
+
+        var site = await _site.GetPublicAsync();
+
+        site.Theme.Should().Be(Themes.Blue);
+        site.Colors.Should().BeNull();
+    }
+
+    [Fact]
+    public void Contrast_is_measured_the_standard_way()
+    {
+        ThemeColors.Contrast("#000000", "#ffffff").Should().BeApproximately(21, 0.01);
+        ThemeColors.Contrast("#ffffff", "#ffffff").Should().BeApproximately(1, 0.001);
+        ThemeColors.Contrast("#777777", "#ffffff").Should().BeApproximately(4.48, 0.01);
+        ThemeColors.Contrast("#ffffff", "#777777").Should().BeApproximately(4.48, 0.01);
     }
 
     [Fact]

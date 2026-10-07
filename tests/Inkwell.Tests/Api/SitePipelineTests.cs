@@ -55,7 +55,7 @@ public class SitePipelineTests : IClassFixture<AdminApiFactory>
         var site = await Json(response);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        site.GetProperty("theme").GetString().Should().BeOneOf("blue", "seagreen");
+        site.GetProperty("theme").GetString().Should().BeOneOf("blue", "seagreen", "custom");
         site.GetProperty("categories").ValueKind.Should().Be(JsonValueKind.Array);
     }
 
@@ -95,6 +95,36 @@ public class SitePipelineTests : IClassFixture<AdminApiFactory>
 
         (await Send(HttpMethod.Put, "/api/v1/admin/settings", token, new { theme = "blue" })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Json(await Send(HttpMethod.Get, "/api/v1/site"))).GetProperty("theme").GetString().Should().Be("blue");
+    }
+
+    [Fact]
+    public async Task The_owner_sets_custom_colours_and_every_visitor_gets_them()
+    {
+        var token = await AdminTokenAsync();
+
+        var saved = await Send(HttpMethod.Put, "/api/v1/admin/settings", token, new { theme = "custom", main = "#7A1F5C", background = "#fff8f0" });
+
+        saved.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Json(saved)).GetProperty("colors").GetProperty("main").GetString().Should().Be("#7a1f5c");
+        var site = await Json(await Send(HttpMethod.Get, "/api/v1/site"));
+        site.GetProperty("theme").GetString().Should().Be("custom");
+        site.GetProperty("colors").GetProperty("main").GetString().Should().Be("#7a1f5c");
+        site.GetProperty("colors").GetProperty("background").GetString().Should().Be("#fff8f0");
+
+        (await Send(HttpMethod.Put, "/api/v1/admin/settings", token, new { theme = "blue" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Json(await Send(HttpMethod.Get, "/api/v1/site"))).GetProperty("colors").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Theory]
+    [InlineData("red", "#ffffff")]
+    [InlineData("#17694a", "#808080")]
+    [InlineData("#17694a", "#fff;}body{display:none")]
+    public async Task Custom_colours_that_are_not_usable_are_refused(string main, string background)
+    {
+        var token = await AdminTokenAsync();
+
+        (await Send(HttpMethod.Put, "/api/v1/admin/settings", token, new { theme = "custom", main, background })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Json(await Send(HttpMethod.Get, "/api/v1/site"))).GetProperty("theme").GetString().Should().NotBe("custom");
     }
 
     [Theory]

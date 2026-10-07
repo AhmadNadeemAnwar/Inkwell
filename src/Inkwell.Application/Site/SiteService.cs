@@ -13,11 +13,20 @@ public sealed record CategoryWithCountDto(Guid Id, string Name, string Slug, int
 
 /// <summary>What the public site needs before it draws anything: how it should look and how posts are shelved.</summary>
 /// <param name="SubscribeEnabled">Whether the site can send email yet; the subscribe form is hidden until it can.</param>
-public sealed record SiteDto(string Theme, IReadOnlyList<CategoryWithCountDto> Categories, bool SubscribeEnabled = false);
+/// <param name="Colors">The owner's own two colours. Present only when the theme is "custom".</param>
+public sealed record SiteDto(string Theme, IReadOnlyList<CategoryWithCountDto> Categories, bool SubscribeEnabled = false, ThemeColorsDto? Colors = null);
 
-public sealed record SiteSettingsDto(string Theme, IReadOnlyList<string> AvailableThemes);
+/// <summary>The two colours a custom theme is made from. Every other colour on the site is worked out from these.</summary>
+/// <param name="Main">The header, links and buttons, as #rrggbb.</param>
+/// <param name="Background">The page behind the text, as #rrggbb.</param>
+public sealed record ThemeColorsDto(string Main, string Background);
 
-public sealed record UpdateSiteSettingsRequest(string Theme);
+/// <param name="Colors">The custom colours last saved, or a starting suggestion, so the pickers always have something to show.</param>
+public sealed record SiteSettingsDto(string Theme, IReadOnlyList<string> AvailableThemes, ThemeColorsDto Colors);
+
+/// <param name="Main">Needed only when <paramref name="Theme"/> is "custom".</param>
+/// <param name="Background">Needed only when <paramref name="Theme"/> is "custom".</param>
+public sealed record UpdateSiteSettingsRequest(string Theme, string? Main = null, string? Background = null);
 
 public sealed record SaveCategoryRequest(string Name);
 
@@ -47,7 +56,10 @@ public static class Themes
     public const string Blue = "blue";
     public const string SeaGreen = "seagreen";
 
-    public static readonly IReadOnlyList<string> All = [Blue, SeaGreen];
+    /// <summary>The owner's own two colours, kept in <see cref="ThemeColors.SettingKey"/>.</summary>
+    public const string Custom = "custom";
+
+    public static readonly IReadOnlyList<string> All = [Blue, SeaGreen, Custom];
 
     public static string Normalise(string? value)
     {
@@ -58,6 +70,76 @@ public static class Themes
 
     /// <summary>A stored value this version does not know (left by a newer or older one) falls back rather than breaking the site.</summary>
     public static string OrDefault(string? stored) => All.Contains(stored ?? string.Empty) ? stored! : Blue;
+}
+
+/// <summary>
+/// The two colours of a custom theme. They are only ever stored and sent as plain #rrggbb, so nothing
+/// else can ride along into a reader's page, and a background is refused when no text could be read on it.
+/// </summary>
+public static partial class ThemeColors
+{
+    public const string SettingKey = "theme.colors";
+
+    /// <summary>Body text must stand out from the page by at least this much (WCAG AAA for long reading).</summary>
+    public const double MinimumTextContrast = 7;
+
+    /// <summary>What the pickers start from before the owner has saved colours of their own.</summary>
+    public static readonly ThemeColorsDto Suggested = new("#17694a", "#ffffff");
+
+    // The two body-text colours the public site chooses between; the same pair is in its palette code.
+    private const string DarkText = "#1c1e21";
+    private const string LightText = "#ececee";
+
+    [System.Text.RegularExpressions.GeneratedRegex("^#[0-9a-f]{6}$")]
+    private static partial System.Text.RegularExpressions.Regex Hex();
+
+    public static ThemeColorsDto Normalise(string? main, string? background)
+    {
+        var colors = new ThemeColorsDto(Clean(main, "main colour"), Clean(background, "background colour"));
+
+        if (BestTextContrast(colors.Background) < MinimumTextContrast)
+            throw new DomainException("Text would be hard to read on that background. Choose a lighter or a darker one.");
+
+        return colors;
+    }
+
+    /// <summary>Reads what <see cref="Store"/> wrote. Anything else (missing, damaged, from another version) is null.</summary>
+    public static ThemeColorsDto? Read(string? stored)
+    {
+        var parts = (stored ?? string.Empty).Split(',');
+        if (parts.Length != 2 || !Hex().IsMatch(parts[0]) || !Hex().IsMatch(parts[1])) return null;
+        return BestTextContrast(parts[1]) < MinimumTextContrast ? null : new ThemeColorsDto(parts[0], parts[1]);
+    }
+
+    public static string Store(ThemeColorsDto colors) => $"{colors.Main},{colors.Background}";
+
+    private static string Clean(string? value, string name)
+    {
+        var clean = value?.Trim().ToLowerInvariant() ?? string.Empty;
+        return Hex().IsMatch(clean) ? clean : throw new DomainException($"The {name} must be a colour like #17694a.");
+    }
+
+    /// <summary>The contrast of the better of dark and light text against a background.</summary>
+    public static double BestTextContrast(string background) =>
+        Math.Max(Contrast(background, DarkText), Contrast(background, LightText));
+
+    /// <summary>The WCAG contrast ratio of two #rrggbb colours, from 1 (identical) to 21 (black on white).</summary>
+    public static double Contrast(string first, string second)
+    {
+        var (a, b) = (Luminance(first), Luminance(second));
+        return (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
+    }
+
+    private static double Luminance(string hex)
+    {
+        static double Channel(string hex, int at)
+        {
+            var value = Convert.ToInt32(hex.Substring(at, 2), 16) / 255.0;
+            return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+        }
+
+        return 0.2126 * Channel(hex, 1) + 0.7152 * Channel(hex, 3) + 0.0722 * Channel(hex, 5);
+    }
 }
 
 public sealed class SiteService : ISiteService
@@ -76,26 +158,47 @@ public sealed class SiteService : ISiteService
         _activity = activity ?? NoActivityLog.Instance;
     }
 
-    public async Task<SiteDto> GetPublicAsync(CancellationToken ct = default) =>
-        new(Themes.OrDefault(await _site.GetSettingAsync(Themes.SettingKey, ct)), await GetCategoriesAsync(ct));
+    public async Task<SiteDto> GetPublicAsync(CancellationToken ct = default)
+    {
+        var (theme, colors) = await CurrentLookAsync(ct);
+        return new SiteDto(theme, await GetCategoriesAsync(ct), Colors: theme == Themes.Custom ? colors : null);
+    }
 
-    public async Task<SiteSettingsDto> GetSettingsAsync(CancellationToken ct = default) =>
-        new(Themes.OrDefault(await _site.GetSettingAsync(Themes.SettingKey, ct)), Themes.All);
+    public async Task<SiteSettingsDto> GetSettingsAsync(CancellationToken ct = default)
+    {
+        var (theme, colors) = await CurrentLookAsync(ct);
+        return new SiteSettingsDto(theme, Themes.All, colors ?? ThemeColors.Suggested);
+    }
+
+    /// <summary>The theme in use and the custom colours on file. A custom theme whose colours cannot be read is the default theme.</summary>
+    private async Task<(string Theme, ThemeColorsDto? Colors)> CurrentLookAsync(CancellationToken ct)
+    {
+        var theme = Themes.OrDefault(await _site.GetSettingAsync(Themes.SettingKey, ct));
+        var colors = ThemeColors.Read(await _site.GetSettingAsync(ThemeColors.SettingKey, ct));
+        return (theme == Themes.Custom && colors is null ? Themes.Blue : theme, colors);
+    }
 
     public async Task<SiteSettingsDto> UpdateSettingsAsync(UpdateSiteSettingsRequest request, string admin, CancellationToken ct = default)
     {
         var theme = Themes.Normalise(request.Theme);
-        var current = Themes.OrDefault(await _site.GetSettingAsync(Themes.SettingKey, ct));
+        var (current, stored) = await CurrentLookAsync(ct);
 
-        if (theme != current)
+        // Colours matter only to the custom theme; choosing a ready-made one leaves the saved colours for next time.
+        var colors = theme == Themes.Custom ? ThemeColors.Normalise(request.Main, request.Background) : stored;
+
+        if (theme != current || colors != stored)
         {
             await _site.SetSettingAsync(Themes.SettingKey, theme, ct);
+            if (colors is not null && colors != stored) await _site.SetSettingAsync(ThemeColors.SettingKey, ThemeColors.Store(colors), ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            await _activity.RecordAsync(admin, Activity.ChangedTheme, $"{current} to {theme}", ct);
+            await _activity.RecordAsync(admin, Activity.ChangedTheme, $"{Describe(current, stored)} to {Describe(theme, colors)}", ct);
         }
 
-        return new SiteSettingsDto(theme, Themes.All);
+        return new SiteSettingsDto(theme, Themes.All, colors ?? ThemeColors.Suggested);
     }
+
+    private static string Describe(string theme, ThemeColorsDto? colors) =>
+        theme == Themes.Custom && colors is not null ? $"custom ({colors.Main} on {colors.Background})" : theme;
 
     public async Task<IReadOnlyList<CategoryWithCountDto>> GetCategoriesAsync(CancellationToken ct = default) =>
         (await _site.GetCategoriesAsync(ct)).Select(row => ToDto(row.Category, row.PublishedPosts)).ToList();

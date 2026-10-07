@@ -103,7 +103,9 @@ async function cachedDocument(request, ctx, contentType, build) {
 /** The post as the API returns it, remembered briefly so a burst of previews is one API call, not many. */
 async function cachedPost(ctx, site, slug, timeoutMs) {
   const cache = caches.default
-  const key = new Request(`https://post-meta.internal/${encodeURIComponent(slug)}`)
+  // The version in the key changes whenever the shape or content of what is stored changes, so copies
+  // remembered by an older deploy are not served by a newer one.
+  const key = new Request(`https://post-meta.internal/v2/${encodeURIComponent(slug)}`)
 
   const hit = await cache.match(key)
   if (hit) return hit.json()

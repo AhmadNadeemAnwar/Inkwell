@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  EMPTY_DOC, findProblem, hasContent, isWebAddress, moveSection, newSection, parseContent, removeSection,
+  EMPTY_DOC, countUndescribedImages, findProblem, hasContent, isWebAddress, moveSection, newSection, parseContent, removeSection,
   serializeContent, updateSection,
 } from './sections'
 import type { Section } from './sections'
@@ -9,7 +9,8 @@ const IMAGE_ID = '0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11'
 
 const paragraph = (words: string) => ({ type: 'paragraph', content: [{ type: 'text', text: words }] })
 const textSection = (words: string): Section => ({ key: `t-${words}`, type: 'text', doc: JSON.stringify({ type: 'doc', content: [paragraph(words)] }) })
-const imageSection = (imageId: string | null = IMAGE_ID): Section => ({ key: 'img', type: 'image', imageId, alt: 'A chart', caption: 'Figure 1' })
+const imageSection = (imageId: string | null = IMAGE_ID, size: { width: number | null; height: number | null } = { width: null, height: null }): Section =>
+  ({ key: 'img', type: 'image', imageId, alt: 'A chart', caption: 'Figure 1', ...size })
 const referencesSection = (...items: [string, string][]): Section => ({ key: 'refs', type: 'references', items: items.map(([title, url]) => ({ title, url })) })
 
 const stored = (sections: Section[]) => JSON.parse(serializeContent(sections)) as { type: string; content: { type: string; attrs?: Record<string, unknown>; content?: unknown[] }[] }
@@ -40,7 +41,7 @@ describe('serializeContent', () => {
 
   it('trims the spaces a writer leaves around captions, titles and links', () => {
     const body = stored([
-      { key: 'i', type: 'image', imageId: IMAGE_ID, alt: '  A chart ', caption: ' Figure 1  ' },
+      { key: 'i', type: 'image', imageId: IMAGE_ID, alt: '  A chart ', caption: ' Figure 1  ', width: null, height: null },
       referencesSection(['  The paper ', ' https://example.com '])
     ])
 
@@ -54,6 +55,46 @@ describe('serializeContent', () => {
 
   it('stores an empty paragraph for a text section whose document is unreadable', () => {
     expect(stored([{ key: 'x', type: 'text', doc: 'not json' }]).content[0].content).toEqual([{ type: 'paragraph' }])
+  })
+})
+
+describe('picture sizes', () => {
+  it('stores the size of a picture with it, so a reader\u2019s page can hold its place', () => {
+    expect(stored([imageSection(IMAGE_ID, { width: 1600, height: 900 })]).content[0].attrs).toEqual({ imageId: IMAGE_ID, alt: 'A chart', caption: 'Figure 1', width: 1600, height: 900 })
+  })
+
+  it('leaves the size out entirely for a picture that has none', () => {
+    expect(stored([imageSection()]).content[0].attrs).toEqual({ imageId: IMAGE_ID, alt: 'A chart', caption: 'Figure 1' })
+  })
+
+  it.each([
+    ['only a width', { width: 1600, height: null }],
+    ['a size of zero', { width: 0, height: 0 }],
+    ['a fractional size', { width: 1600.5, height: 900 }],
+    ['an absurd size', { width: 999999, height: 900 }],
+  ])('leaves out %s rather than store something the API would refuse', (_, size) => {
+    expect(stored([imageSection(IMAGE_ID, size)]).content[0].attrs).toEqual({ imageId: IMAGE_ID, alt: 'A chart', caption: 'Figure 1' })
+  })
+
+  it('reads a size back, and reads a missing or broken one as none', () => {
+    const json = (attrs: Record<string, unknown>) => JSON.stringify({ type: 'sections', content: [{ type: 'imageSection', attrs: { imageId: IMAGE_ID, ...attrs } }] })
+
+    expect(parseContent(json({ width: 1600, height: 900 }))[0]).toMatchObject({ width: 1600, height: 900 })
+    expect(parseContent(json({}))[0]).toMatchObject({ width: null, height: null })
+    expect(parseContent(json({ width: '1600', height: 900 }))[0]).toMatchObject({ width: null, height: null })
+    expect(parseContent(json({ width: 1600 }))[0]).toMatchObject({ width: null, height: null })
+  })
+})
+
+describe('countUndescribedImages', () => {
+  const image = (alt: string, imageId: string | null = IMAGE_ID): Section => ({ key: `i-${alt}-${imageId}`, type: 'image', imageId, alt, caption: 'A caption is not a description', width: null, height: null })
+
+  it('counts pictures with no description, ignoring ones that have one', () => {
+    expect(countUndescribedImages([image(''), image('   '), image('A chart of results'), textSection('words')])).toBe(2)
+  })
+
+  it('does not count a picture section that has no picture yet', () => {
+    expect(countUndescribedImages([image('', null)])).toBe(0)
   })
 })
 
@@ -179,7 +220,7 @@ describe('findProblem', () => {
   })
 
   it('catches text that is too long for its field', () => {
-    expect(findProblem([{ key: 'i', type: 'image', imageId: IMAGE_ID, alt: 'x'.repeat(301), caption: '' }])).toMatch(/300/)
+    expect(findProblem([{ key: 'i', type: 'image', imageId: IMAGE_ID, alt: 'x'.repeat(301), caption: '', width: null, height: null }])).toMatch(/300/)
     expect(findProblem([referencesSection(['x'.repeat(201), ''])])).toMatch(/200/)
   })
 

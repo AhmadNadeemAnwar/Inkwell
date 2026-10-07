@@ -4,8 +4,6 @@
  * prefix test such as startsWith('/') lets protocol-relative "//evil.example" through.
  */
 
-import { API_BASE } from '../api/client'
-
 const IMAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const STORED_IMAGE_PATH = /^\/api\/v1\/images\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
 
@@ -14,9 +12,12 @@ export function isImageId(value: string | null | undefined): value is string {
   return typeof value === 'string' && IMAGE_ID.test(value)
 }
 
-/** Where the browser fetches an uploaded picture from: always the API, whatever the id. */
+/**
+ * Where the browser fetches an uploaded picture from: this site's own /media/ address. Cloudflare
+ * keeps a copy there, so pictures stay fast even while the API is waking up.
+ */
 export function storedImageUrl(imageId: string): string {
-  return `${API_BASE}/api/v1/images/${imageId}`
+  return `/media/${imageId.toLowerCase()}`
 }
 
 function parse(url: string | null | undefined): URL | null {

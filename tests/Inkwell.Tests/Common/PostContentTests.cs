@@ -94,6 +94,30 @@ public class PostContentTests
     }
 
     [Fact]
+    public void A_picture_may_carry_its_size_so_pages_can_hold_its_place()
+    {
+        var withSize = JsonSerializer.Serialize(new { type = "imageSection", attrs = new { imageId = ImageId, alt = "A chart", caption = "", width = 1600, height = 900 } });
+
+        ((Action)(() => PostContent.Validate(Sections(withSize)))).Should().NotThrow();
+        ((Action)(() => PostContent.Validate(Sections(Image())))).Should().NotThrow("older posts have no size at all");
+    }
+
+    [Theory]
+    [InlineData("""{"imageId":"0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11","width":1600}""")]
+    [InlineData("""{"imageId":"0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11","height":900}""")]
+    [InlineData("""{"imageId":"0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11","width":0,"height":900}""")]
+    [InlineData("""{"imageId":"0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11","width":-5,"height":900}""")]
+    [InlineData("""{"imageId":"0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11","width":1600.5,"height":900}""")]
+    [InlineData("""{"imageId":"0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11","width":"1600","height":"900"}""")]
+    [InlineData("""{"imageId":"0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11","width":999999,"height":900}""")]
+    public void A_size_that_is_partial_or_not_a_real_size_is_rejected(string attrs)
+    {
+        var act = () => PostContent.Validate(Sections($$"""{"type":"imageSection","attrs":{{attrs}}}"""));
+
+        act.Should().Throw<DomainException>().WithMessage("*size*");
+    }
+
+    [Fact]
     public void An_overlong_caption_is_rejected()
     {
         var act = () => PostContent.Validate(Sections(Image(caption: new string('c', PostContent.MaxCaptionLength + 1))));

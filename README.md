@@ -1,163 +1,153 @@
 # Inkwell
 
-A content publishing platform in the shape of Medium: anyone can write and publish posts on any
-topic, and anyone can search, browse and discuss them.
+A personal publishing site. One owner writes; anyone can read, search, react and subscribe.
+There are no reader accounts.
 
-ASP.NET Core 10 Web API (layered / "Clean Architecture") + React 19 SPA with a TipTap editor.
+Live at https://inkwell.ahmadnadeem.dev, with a private admin portal at https://admin.ahmadnadeem.dev.
 
-## Running it
-
-Two processes. Both need to be running.
-
-**API** — http://localhost:5231, Swagger at `/swagger`:
-
-```bash
-dotnet run --project inkwell/src/Inkwell.Api
-```
-
-**Web** — http://localhost:5173:
-
-```bash
-npm install --prefix inkwell/web
-```
-
-```bash
-npm run dev --prefix inkwell/web
-```
-
-The Vite dev server proxies `/api` to the API, so the browser stays on one origin and there is no
-CORS preflight in development.
-
-On first run the API applies migrations and seeds three writers and six posts into
-`inkwell/src/Inkwell.Api/inkwell.db`. Every seeded account uses the password `Password123!` —
-sign in as `maya@example.com` to look around, or register a new account.
-
-**Tests** — 63 tests over the domain, application services and repositories:
-
-```bash
-dotnet test inkwell/tests/Inkwell.Tests
-```
-
-## Admin portal
-
-`admin/` is a separate private site (deployed to `admin.ahmadnadeem.dev`) for moderating posts, comments
-and topics, viewing stats, and editing the portfolio's blog, projects and updates. It signs in with a
-an authenticator-app code (no password). Setup, usage and the security model are in [ADMIN.md](ADMIN.md).
-
-## Architecture
-
-```
-inkwell/
-  src/
-    Inkwell.Domain          Entities, invariants, repository interfaces. No framework dependencies.
-    Inkwell.Application     DTOs, services, validators, editor-document handling. Depends on Domain.
-    Inkwell.Infrastructure  EF Core, repositories, migrations, BCrypt, JWT. Depends on Domain + Application.
-    Inkwell.Api             Controllers, middleware, auth, rate limiting, DI. Depends on Application + Infrastructure.
-  tests/
-    Inkwell.Tests           xUnit + FluentAssertions, over a real in-memory SQLite database.
-  web/                      Vite + React 19 + TypeScript client.
-```
-
-Dependencies point inward: `Api -> Application/Infrastructure -> Domain`.
-
-### Data model
-
-| Entity | Purpose |
-|---|---|
-| `User` | Account and public profile. `Handle` is the public identity and is immutable. |
-| `Post` | Title, subtitle, slug, editor document, status, denormalised engagement counters. |
-| `Tag` / `PostTag` | Topic taxonomy. `Tag.PostCount` is maintained on publish/unpublish. |
-| `Comment` | Threaded one level deep; soft-deleted so replies keep their place. |
-| `Clap` | One row per reader per post; repeat claps accumulate up to a per-user cap. |
-| `Bookmark` | Reading list. |
-| `UserFollow` / `TagFollow` | Follow a writer or a topic — both feed the personal feed. |
-| `PostRevision` | Snapshot written before every edit, so a draft is always recoverable. |
-
-### Decisions worth knowing
-
-**Post bodies are stored as ProseMirror/TipTap JSON, not HTML.** The reading view walks that JSON
-and renders React elements for a fixed set of node and mark types — there is no
-`dangerouslySetInnerHTML` anywhere in the client, so a crafted document cannot inject markup into a
-reader's page. `javascript:` and `data:` URLs are dropped from links and images. Storing structured
-JSON also means old posts can be re-themed later, which raw HTML would prevent.
-
-**Plain text is derived on the server, never accepted from the client.** `ProseMirrorText.Extract`
-flattens the document into `Post.PlainText`, which backs search, excerpts and reading time. Trusting
-the browser for it would let a caller poison search results.
-
-**Slugs are assigned once, at first publish, and never recomputed.** Retitling a published post keeps
-its URL. Collisions get a short random discriminator rather than a count-and-retry loop.
-
-**Search lives behind a single repository method.** `PostRepository.SearchAsync` is the only place
-that knows how matching works. It currently uses SQL `LIKE` with user wildcards stripped, which is
-portable and fine at this scale; moving to Postgres `tsvector` + a GIN index changes that one method
-and nothing else.
-
-**SQLite stores timestamps as UTC ticks.** SQLite has no native `DateTimeOffset` and refuses to
-`ORDER BY` one, which would break every "newest first" query. A value converter applied in
-`AppDbContext` maps them to integers; on Postgres the conversion is skipped and `timestamptz` is used.
-
-**Writes are rate limited, reads are not.** A fixed window of 30 writes per minute is partitioned by
-user (falling back to IP), so browsing never hits a limit but comment and publish spam does.
-
-**Passwords are BCrypt with work factor 12**, and login returns the same message for a wrong password
-and an unknown email so the endpoint cannot be used to enumerate registered accounts.
-
-## API
-
-All routes are under `/api/v1`. Anonymous readers can browse, search and read; everything else needs
-a bearer token from `/auth/login`.
-
-| Method | Route | Notes |
+| Part | What it is | Where it runs |
 |---|---|---|
-| POST | `/auth/register`, `/auth/login` | Returns a JWT and the current user |
-| GET | `/auth/me` | Restores a session on page load |
-| GET | `/posts` | Browse + search: `q`, `tag`, `author`, `sort`, `pageNumber`, `pageSize` |
-| GET | `/posts/feed` | Posts from followed writers and topics |
-| GET | `/posts/drafts`, `/posts/bookmarks` | The caller's own drafts and reading list |
-| GET | `/posts/{slug}` | Read by canonical slug; counts a view |
-| GET | `/posts/{id}/edit` | Load for editing, including drafts |
-| GET | `/posts/{id}/related` | Ranked by shared tags |
-| GET | `/posts/{id}/revisions` | Autosave history |
-| POST | `/posts` | Create a draft |
-| PUT | `/posts/{id}` | Save an edit (also writes a revision) |
-| POST | `/posts/{id}/publish`, `/posts/{id}/unpublish` | |
-| DELETE | `/posts/{id}` | |
-| POST | `/posts/{id}/claps`, `/posts/{id}/bookmark` | |
-| GET/POST | `/posts/{id}/comments` | Read/add; `parentId` for replies |
-| PUT/DELETE | `/comments/{id}` | Author of the comment or of the post |
-| GET | `/users/{handle}`, `/users/{handle}/posts` | Public profile |
-| PUT | `/users/me` | Update your profile |
-| POST | `/users/{handle}/follow`, `/tags/{slug}/follow` | Toggles |
-| GET | `/tags`, `/tags/suggest`, `/tags/following` | Popular, type-ahead, followed |
+| `src/` | ASP.NET Core 10 Web API (layered: Domain, Application, Infrastructure, Api) | Render |
+| `web/` | The public site: React 19 + Vite, plus a small Cloudflare Worker (`web/worker/`) | Cloudflare |
+| `admin/` | The owner's portal: React 19 + Vite, with a TipTap editor | Cloudflare |
+| `tools/Inkwell.AdminSetup` | One-off helper to create the authenticator secret | your machine |
 
-Errors are RFC 7807 problem details: `NotFoundException` → 404, `ForbiddenException` → 403,
-`ConflictException` → 409, `DomainException` → 400, anything else → 500 with the detail suppressed
-outside development.
+Everything runs on free plans. How to deploy is in [DEPLOY.md](DEPLOY.md); how to use and set up the
+admin portal is in [ADMIN.md](ADMIN.md).
+
+## Running it locally
+
+Three processes.
+
+**API**, at http://localhost:5231 (Swagger at `/swagger`):
+
+```bash
+dotnet run --project src/Inkwell.Api
+```
+
+**Public site**, at http://localhost:5173:
+
+```bash
+npm install --prefix web
+```
+
+```bash
+npm run dev --prefix web
+```
+
+**Admin portal**, at http://localhost:5174:
+
+```bash
+npm install --prefix admin
+```
+
+```bash
+npm run dev --prefix admin
+```
+
+Both sites proxy `/api` to the local API, so the browser stays on one origin in development.
+
+On first run the API applies its migrations and seeds three sample writers and a few posts into
+`src/Inkwell.Api/inkwell.db`. To sign in to the local admin portal, use `maya@example.com` and a code
+from an authenticator app loaded with the development secret in
+`src/Inkwell.Api/appsettings.Development.json` (`Admin:TotpSecret`). That secret and the seeded
+accounts exist only in development and are never used by the deployed site.
+
+The Worker is not part of `npm run dev`. To try it, run `npx wrangler dev` in `web/`; it serves the
+built site from `web/dist` and talks to whatever `API_BASE` in `web/wrangler.jsonc` points at.
+
+## Tests
+
+```bash
+dotnet test tests/Inkwell.Tests
+```
+
+```bash
+npm test --prefix web
+```
+
+```bash
+npm test --prefix admin
+```
+
+The API tests use a real in-memory SQLite database, run the full HTTP pipeline in Production
+configuration, and check that every query also translates for Postgres. The front-end tests cover
+the logic that has rules worth pinning down: how a post body is stored and rendered, link and
+picture address checks, the Worker's preview, sitemap and feed output, and form validation.
+
+## How it works
+
+**Readers have no accounts.** Each browser makes up a random id for itself. The API stores only a
+hash of it, and uses it for two things: so a reader's Clap or Insightful is a toggle rather than a
+counter, and so a view is counted once per reader per post per day. Crawlers and link previews are
+not counted, because a view is reported by the page's script, not by fetching the post.
+
+**The owner signs in with an authenticator code, and nothing else.** Email-and-password sign-in is
+switched off in production (`Accounts:AllowPasswordSignIn`). An admin session lasts two hours, lives
+in the browser tab, and is re-checked against the admin list on every request.
+
+**A post body is structured data, not HTML.** It is a list of sections (rich text, an uploaded
+picture, a list of sources) stored as JSON. The public site walks that JSON and renders React
+elements for a fixed set of node types; there is no `dangerouslySetInnerHTML` anywhere, so a crafted
+body cannot inject markup. The API checks the shape again before saving, and derives the searchable
+plain text itself rather than trusting the browser for it.
+
+**A post is in one of three states:** Draft, Published, or Inactive (shown as "Not active"). Its
+address is fixed the first time it is published (`/read/its-title-k3x9p`) and never changes, so
+retitling or republishing does not break a link.
+
+**Pictures live in the database.** Uploads are shrunk in the browser, type-checked by their signature
+bytes on the server, and capped at 300 MB in total to stay inside the free database allowance. The
+public site fetches them from `/media/<id>`, which the Worker serves from Cloudflare's cache.
+
+**The Worker fills the gaps a single-page app leaves.** It runs only for a few addresses: it adds
+each post's title, description and picture to its page so shared links show a proper card; answers
+"not found" for a post that does not exist; redirects old `/p/` links; serves pictures from cache;
+and builds `/sitemap.xml` and `/rss.xml`.
+
+**Email is opt-in twice.** A reader is not subscribed until they click the link in a confirmation
+email, and nothing is sent to subscribers until the owner presses *Notify subscribers* on a post.
+Until a mail service key is configured the feature is off and the subscribe form is hidden.
+
+## Layout
+
+```
+src/
+  Inkwell.Domain              Entities, invariants, repository interfaces. No framework dependencies.
+  Inkwell.Application         Services, DTOs, validators, post-body checks. Depends on Domain.
+  Inkwell.Infrastructure      EF Core, repositories, SQLite migrations, tokens, mail. Depends on Domain + Application.
+  Inkwell.Migrations.Postgres The same migrations generated for Postgres, which production uses.
+  Inkwell.Api                 Controllers, middleware, rate limiting, DI.
+tests/Inkwell.Tests           xUnit + FluentAssertions.
+web/                          Public site, and web/worker/ for the Cloudflare Worker.
+admin/                        Admin portal.
+offline/                      A "temporarily offline" page for pausing a site.
+```
+
+Dependencies point inward: `Api -> Application / Infrastructure -> Domain`.
+
+Local development uses SQLite; production uses Postgres. Timestamps are stored as UTC ticks on
+SQLite, which has no native type for them and could not otherwise sort by date.
 
 ## Configuration
 
-`Jwt:Key` must be at least 32 characters or the API refuses to start rather than issuing tokens
-signed with a weak key. The development value is in `appsettings.Development.json`; in any deployed
-environment set it via `JWT__KEY` and never commit it.
+Nothing secret is in the repository. On the host, set:
 
-## What is deliberately not built yet
+| Setting | What it is |
+|---|---|
+| `Jwt__Key` | Signing key, at least 32 characters. The API refuses to start without one. |
+| `ConnectionStrings__Default`, `Database__Provider=postgres` | The database. |
+| `Admin__Emails__0`, `Admin__TotpSecret` | Who may use the admin portal, and their authenticator secret. |
+| `Email__ApiKey`, `Email__FromAddress` | Optional. Switches on email subscriptions (Brevo). |
+| `Portfolio__Repo`, `Portfolio__Token` | Optional. Switches on portfolio editing. |
 
-Ordered roughly by value per unit of effort:
+## Limits worth knowing
 
-1. **Image uploads.** Cover images and inline images take a URL today. Wire an object store
-   (Cloudflare R2 or Supabase Storage, both with usable free tiers) and a presigned-upload endpoint.
-2. **Email.** Password reset, and the per-author newsletter that actually retains readers.
-3. **Server-side rendering.** A publishing platform that renders only on the client is invisible to
-   search engines, which defeats the point. This is the single biggest gap for a real launch.
-   Also needed: `sitemap.xml`, RSS per author and per tag, and OG images.
-4. **Moderation tooling.** Report flow, an admin queue, and soft-delete/shadowban. Rate limiting is
-   in place; the human process around it is not.
-5. **Inline highlights and annotations.** Medium's signature feature and a genuine differentiator —
-   select text, highlight it, optionally attach a public response.
-6. **Writer analytics.** Views are counted but not surfaced. Read *ratio* (scroll-depth completion)
-   matters more to writers than raw views.
-7. **Publications.** Multi-author blogs with member roles.
-8. **Semantic related-posts and search** via embeddings in `pgvector`, replacing tag-overlap ranking
-   and enabling natural-language queries.
-9. **Series/collections**, co-authoring, and Markdown import/export.
+- The API sleeps when idle on the free plan, so the first request after a quiet spell is slow.
+  Pictures and link previews are cached at Cloudflare to soften this; post text is not.
+- Reader counts are honest but not tamper-proof: clearing a browser's site data makes a "new" reader.
+- A picture removed from a post stays in the database; there is no screen yet to delete unused ones.
+- Search is a case-insensitive substring match, which is fine at this size. It lives behind one
+  repository method, so moving to Postgres full-text search later changes only that method.
+- Some account-era features remain in the API but are unreachable now that nobody can sign in with a
+  password: comments, bookmarks, follows and the personal feed.

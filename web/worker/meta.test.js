@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  FETCHER_TIMEOUT_MS, READER_TIMEOUT_MS, absoluteImage, buildRss, buildSitemap, describePost, escapeText, headTags, plainText,
+  FETCHER_TIMEOUT_MS, PREVIEW_FRESH_MS, READER_TIMEOUT_MS, absoluteImage, firstImageId, isStale, mediaIdFromPath, oldPostRedirect, buildRss, buildSitemap, describePost, escapeText, headTags, plainText,
   slugFromPath, summarise, timeoutFor,
 } from './meta.js'
 
@@ -82,18 +82,17 @@ describe('plainText', () => {
     expect(plainText(post().contentJson)).toBe('First paragraph. Second paragraph.')
   })
 
-  it('reads a post written before sections existed, and picture captions', () => {
+  it('reads a post written before sections existed', () => {
     expect(plainText(JSON.stringify({ type: 'doc', content: [paragraph('Older post.')] }))).toBe('Older post.')
-    expect(plainText(JSON.stringify({ type: 'sections', content: [{ type: 'imageSection', attrs: { imageId: 'x', caption: 'A caption' } }] }))).toBe('A caption')
   })
 
-  it('keeps a picture caption apart from the paragraph after it', () => {
+  it('leaves picture captions out, so a description starts with the article and not a label', () => {
     const body = JSON.stringify({ type: 'sections', content: [
       { type: 'imageSection', attrs: { imageId: 'x', caption: 'AI generated photo' } },
       { type: 'textSection', content: [paragraph('We keep asking.')] },
     ] })
 
-    expect(plainText(body)).toBe('AI generated photo We keep asking.')
+    expect(plainText(body)).toBe('We keep asking.')
   })
 
   it('returns nothing for a body it cannot read', () => {
@@ -120,20 +119,100 @@ describe('summarise', () => {
 })
 
 describe('absoluteImage', () => {
-  it('points an uploaded picture at the API', () => {
-    expect(absoluteImage(IMAGE, SITE.apiBase)).toBe(`https://api.example${IMAGE}`)
+  it("points an uploaded picture at the site's own cached address, not at the API", () => {
+    expect(absoluteImage(IMAGE, SITE.siteOrigin)).toBe('https://inkwell.example/media/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11')
   })
 
   it('keeps an https link as it is', () => {
-    expect(absoluteImage('https://images.example/cover.jpg', SITE.apiBase)).toBe('https://images.example/cover.jpg')
+    expect(absoluteImage('https://images.example/cover.jpg', SITE.siteOrigin)).toBe('https://images.example/cover.jpg')
   })
 
   it.each(['http://insecure.example/x.png', 'javascript:alert(1)', '/api/v1/admin/stats', '//evil.example/x.png', '', null, 42])('drops %s', (value) => {
-    expect(absoluteImage(value, SITE.apiBase)).toBeNull()
+    expect(absoluteImage(value, SITE.siteOrigin)).toBeNull()
+  })
+})
+
+describe('mediaIdFromPath', () => {
+  it('reads the picture id from a picture address', () => {
+    expect(mediaIdFromPath('/media/0B6F8F0E-2f0b-4a53-9a3e-0e6a1f4f7c11')).toBe('0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11')
+  })
+
+  it.each(['/media/', '/media/not-an-id', '/media/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11/extra', '/media/../api/v1/admin/stats', '/api/v1/images/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11', '/media/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11.png'])(
+    'refuses %s, so the address can only ever fetch a picture',
+    (path) => {
+      expect(mediaIdFromPath(path)).toBeNull()
+    },
+  )
+})
+
+describe('oldPostRedirect', () => {
+  it('sends an old post address to the new one', () => {
+    expect(oldPostRedirect('/p/today-for-tomorrow')).toBe('/read/today-for-tomorrow')
+    expect(oldPostRedirect('/p/today-for-tomorrow/')).toBe('/read/today-for-tomorrow')
+  })
+
+  it.each(['/read/today-for-tomorrow', '/p/', '/p/a/b', '/p/..%2Fadmin', '/p/%2F%2Fevil.example', '/privacy'])('does not redirect %s', (path) => {
+    expect(oldPostRedirect(path)).toBeNull()
+  })
+})
+
+describe('firstImageId', () => {
+  const body = (...content) => JSON.stringify({ type: 'sections', content })
+  const image = (imageId) => ({ type: 'imageSection', attrs: { imageId } })
+
+  it('finds the first picture in the article', () => {
+    expect(firstImageId(body({ type: 'textSection', content: [] }, image('0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11'), image('11111111-2f0b-4a53-9a3e-0e6a1f4f7c11')))).toBe('0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11')
+  })
+
+  it('skips a picture section whose id is not a real id', () => {
+    expect(firstImageId(body(image('https://evil.example/x.png'), image('11111111-2f0b-4a53-9a3e-0e6a1f4f7c11')))).toBe('11111111-2f0b-4a53-9a3e-0e6a1f4f7c11')
+  })
+
+  it('finds nothing in a post with no pictures, an older post, or a broken body', () => {
+    expect(firstImageId(body({ type: 'textSection', content: [] }))).toBeNull()
+    expect(firstImageId(JSON.stringify({ type: 'doc', content: [] }))).toBeNull()
+    expect(firstImageId('not json')).toBeNull()
+    expect(firstImageId('null')).toBeNull()
+  })
+})
+
+describe('isStale', () => {
+  const now = 1_800_000_000_000
+
+  it('treats a recently remembered preview as fresh', () => {
+    expect(isStale(now - 1000, now)).toBe(false)
+    expect(isStale(now - PREVIEW_FRESH_MS + 1, now)).toBe(false)
+  })
+
+  it('treats an older one as due for a check', () => {
+    expect(isStale(now - PREVIEW_FRESH_MS, now)).toBe(true)
+    expect(isStale(now - 6 * 60 * 60 * 1000, now)).toBe(true)
+  })
+
+  it.each([undefined, null, 'yesterday', NaN])('treats one with no readable time (%s) as due for a check', (value) => {
+    expect(isStale(value, now)).toBe(true)
   })
 })
 
 describe('describePost', () => {
+  it('uses the first picture in the article when there is no cover', () => {
+    const contentJson = JSON.stringify({ type: 'sections', content: [
+      { type: 'imageSection', attrs: { imageId: '0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11', caption: 'AI generated photo' } },
+      { type: 'textSection', content: [paragraph('We keep asking.')] },
+    ] })
+
+    const meta = describePost(post({ contentJson }), SITE)
+
+    expect(meta.image).toBe('https://inkwell.example/media/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11')
+    expect(meta.description).toBe('We keep asking.')
+  })
+
+  it('prefers the cover over a picture in the article', () => {
+    const contentJson = JSON.stringify({ type: 'sections', content: [{ type: 'imageSection', attrs: { imageId: '11111111-2f0b-4a53-9a3e-0e6a1f4f7c11' } }] })
+
+    expect(describePost(post({ contentJson, coverImageUrl: 'https://images.example/cover.jpg' }), SITE).image).toBe('https://images.example/cover.jpg')
+  })
+
   it('uses the subtitle as the description when there is one', () => {
     expect(describePost(post({ subtitle: 'The subtitle.' }), SITE).description).toBe('The subtitle.')
   })
@@ -155,7 +234,7 @@ describe('describePost', () => {
       title: 'A post · Inkwell',
       heading: 'A post',
       url: 'https://inkwell.example/read/a-post',
-      image: `https://api.example${IMAGE}`,
+      image: 'https://inkwell.example/media/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11',
       author: 'Ahmad Nadeem',
     })
   })
@@ -168,7 +247,7 @@ describe('headTags', () => {
     expect(tags).toContain('<link rel="canonical" href="https://inkwell.example/read/a-post">')
     expect(tags).toContain('<meta property="og:title" content="A post">')
     expect(tags).toContain('<meta property="og:type" content="article">')
-    expect(tags).toContain(`<meta property="og:image" content="https://api.example${IMAGE}">`)
+    expect(tags).toContain('<meta property="og:image" content="https://inkwell.example/media/0b6f8f0e-2f0b-4a53-9a3e-0e6a1f4f7c11">')
     expect(tags).toContain('<meta name="twitter:card" content="summary_large_image">')
     expect(tags).toContain('<meta name="description" content="First paragraph. Second paragraph.">')
   })

@@ -32,15 +32,24 @@ export function RichText({ contentJson }: { contentJson: string }) {
     return <p className="muted">This post could not be displayed.</p>
   }
 
-  return <div className="prose">{renderChildren(doc?.content)}</div>
+  // The first picture is usually on screen as the page opens, so it loads at once; the rest wait
+  // until the reader scrolls near them.
+  const first = Array.isArray(doc?.content) ? doc.content.find((node) => node?.type === 'imageSection') : undefined
+
+  return <div className="prose">{renderChildren(doc?.content, first)}</div>
 }
 
-function renderChildren(nodes: Node[] | undefined): ReactNode {
+function renderChildren(nodes: Node[] | undefined, first?: Node): ReactNode {
   if (!Array.isArray(nodes)) return null
-  return nodes.map((node, index) => <RenderNode key={index} node={node} />)
+  return nodes.map((node, index) => <RenderNode key={index} node={node} first={first} />)
 }
 
-function RenderNode({ node }: { node: Node }): ReactNode {
+/** A stored size, if it is a believable one. Used only to hold a picture's place while it loads. */
+function dimension(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 20_000 ? value : undefined
+}
+
+function RenderNode({ node, first }: { node: Node; first?: Node }): ReactNode {
   if (typeof node !== 'object' || node === null) return null
 
   switch (node.type) {
@@ -89,9 +98,20 @@ function RenderNode({ node }: { node: Node }): ReactNode {
       const imageId = text(node.attrs?.imageId)
       if (!isImageId(imageId)) return null
       const caption = text(node.attrs?.caption)
+      const width = dimension(node.attrs?.width)
+      const height = dimension(node.attrs?.height)
+      const sized = width !== undefined && height !== undefined
       return (
         <figure className="prose__figure">
-          <img src={storedImageUrl(imageId)} alt={text(node.attrs?.alt)} loading="lazy" decoding="async" />
+          <img
+            src={storedImageUrl(imageId)}
+            alt={text(node.attrs?.alt)}
+            // With its size known, the browser keeps the picture's space free, so the text below does not jump when it arrives.
+            width={sized ? width : undefined}
+            height={sized ? height : undefined}
+            loading={node === first ? 'eager' : 'lazy'}
+            decoding="async"
+          />
           {caption && <figcaption>{caption}</figcaption>}
         </figure>
       )

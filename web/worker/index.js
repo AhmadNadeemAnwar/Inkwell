@@ -3,8 +3,11 @@
 // link previews (LinkedIn, WhatsApp, Slack), feed readers and some search crawlers. This fills
 // that gap, and nothing else:
 //
-//   /read/<post>   the normal page, with the post's title, description and picture added to its head
-//                  (/p/<post>, where posts used to live, is treated the same)
+//   /read/<post>   the normal page, with the post's title, description and picture added to its head.
+//                  A post that does not exist, or has been taken down, answers "not found".
+//   /p/<post>      where posts used to live: sent on to /read/<post>
+//   /media/<id>    a picture from a post, fetched from the API once and then kept by Cloudflare,
+//                  so readers are not left waiting on the API for pictures
 //   /sitemap.xml   every published post, for search engines
 //   /rss.xml       the newest posts, for feed readers
 //
@@ -14,9 +17,12 @@
 //
 // Free plan allowance: 100,000 runs a day. One run per post page opened, plus feed and sitemap fetches.
 
-import { buildRss, buildSitemap, describePost, headTags, slugFromPath, timeoutFor } from './meta.js'
+import {
+  IMAGE_TYPES, buildRss, buildSitemap, describePost, headTags, isStale, mediaIdFromPath, oldPostRedirect, slugFromPath, timeoutFor,
+} from './meta.js'
 
 const LIST_TIMEOUT_MS = 20000
+const MEDIA_TIMEOUT_MS = 25000
 
 // Long enough that a post someone has already opened keeps its preview while the API sleeps. The
 // cost is that an edited title or subtitle can take this long to reach new previews.
@@ -44,6 +50,16 @@ export default {
           return await cachedDocument(request, ctx, 'application/rss+xml; charset=utf-8', async () => buildRss(await listPosts(site, RSS_ITEMS), site))
         }
 
+        const mediaId = mediaIdFromPath(url.pathname)
+        if (mediaId) return await media(request, ctx, site, mediaId)
+        // Anything else under /media/ is not a picture address; it must not fall through to the page.
+        if (url.pathname.startsWith('/media/')) {
+          return new Response('Not found\n', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
+        }
+
+        const moved = oldPostRedirect(url.pathname)
+        if (moved) return Response.redirect(`${url.origin}${moved}`, 301)
+
         const slug = slugFromPath(url.pathname)
         if (slug) return await postPage(request, env, ctx, site, slug)
       } catch (error) {
@@ -52,6 +68,12 @@ export default {
           return new Response('Temporarily unavailable. Please try again shortly.\n', {
             status: 503,
             headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '120', 'Cache-Control': 'no-store' },
+          })
+        }
+        if (url.pathname.startsWith('/media/')) {
+          return new Response('This picture is temporarily unavailable.\n', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '30', 'Cache-Control': 'no-store' },
           })
         }
         console.log('preview unavailable', url.pathname, String(error))
@@ -100,26 +122,73 @@ async function cachedDocument(request, ctx, contentType, build) {
   return response
 }
 
-/** The post as the API returns it, remembered briefly so a burst of previews is one API call, not many. */
-async function cachedPost(ctx, site, slug, timeoutMs) {
+/** Marks the API's "there is no such post" answer, as opposed to "could not find out". */
+const GONE = Symbol('gone')
+
+const metaKey = (slug) => new Request(`https://post-meta.internal/v3/${encodeURIComponent(slug)}`)
+
+/** Asks the API about a post and remembers the answer. Forgets it if the post is gone. */
+async function refreshPost(ctx, site, slug, timeoutMs) {
   const cache = caches.default
-  // The version in the key changes whenever the shape or content of what is stored changes, so copies
-  // remembered by an older deploy are not served by a newer one.
-  const key = new Request(`https://post-meta.internal/v2/${encodeURIComponent(slug)}`)
-
-  const hit = await cache.match(key)
-  if (hit) return hit.json()
-
   const post = await getJson(`${site.apiBase}/api/v1/posts/${encodeURIComponent(slug)}`, timeoutMs)
-  if (post) {
-    // Only what the preview needs is kept; the body is reduced to its description first.
-    const meta = describePost(post, site)
-    ctx.waitUntil(cache.put(key, new Response(JSON.stringify(meta), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${POST_CACHE_SECONDS}` },
-    })))
+  if (!post) {
+    ctx.waitUntil(cache.delete(metaKey(slug)))
+    return GONE
+  }
+
+  // Only what the preview needs is kept; the body is reduced to its description first.
+  const meta = { ...describePost(post, site), fetchedAt: Date.now() }
+  ctx.waitUntil(cache.put(metaKey(slug), new Response(JSON.stringify(meta), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${POST_CACHE_SECONDS}` },
+  })))
+  return meta
+}
+
+/**
+ * What a preview of this post should show. A remembered answer is used straight away, so a burst
+ * of previews is one API call and a sleeping API does not blank them; once it is a few minutes old
+ * it is also checked again in the background, which is how an edit or a take-down gets noticed.
+ */
+async function cachedPost(ctx, site, slug, timeoutMs) {
+  const hit = await caches.default.match(metaKey(slug))
+  if (hit) {
+    const meta = await hit.json()
+    if (isStale(meta.fetchedAt)) ctx.waitUntil(refreshPost(ctx, site, slug, LIST_TIMEOUT_MS).catch(() => {}))
     return meta
   }
-  return null
+
+  return refreshPost(ctx, site, slug, timeoutMs)
+}
+
+/** A picture from a post. Fetched from the API the first time, then served from Cloudflare's own copy. */
+async function media(request, ctx, site, id) {
+  const cache = caches.default
+  const key = new Request(`${new URL(request.url).origin}/media/${id}`, { method: 'GET' })
+
+  const hit = await cache.match(key)
+  if (hit) return hit
+
+  const upstream = await fetch(`${site.apiBase}/api/v1/images/${id}`, { signal: AbortSignal.timeout(MEDIA_TIMEOUT_MS) })
+  if (upstream.status === 404) {
+    return new Response('Not found\n', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
+  }
+  if (!upstream.ok) throw new Error(`API answered ${upstream.status} for a picture`)
+
+  // Whatever the API says, this address only ever hands out a picture.
+  const type = (upstream.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase()
+  if (!IMAGE_TYPES.includes(type)) throw new Error('the API returned something that is not a picture')
+
+  const response = new Response(upstream.body, {
+    headers: {
+      'Content-Type': type,
+      // A picture never changes once stored (a new upload gets a new id), so it can be kept for good.
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+    },
+  })
+  ctx.waitUntil(cache.put(key, response.clone()))
+  return response
 }
 
 async function postPage(request, env, ctx, site, slug) {
@@ -132,7 +201,17 @@ async function postPage(request, env, ctx, site, slug) {
   const page = await pagePromise
 
   const isHtml = (page.headers.get('Content-Type') || '').includes('text/html')
-  if (!meta || !isHtml || !page.ok) return page
+
+  if (meta === GONE && isHtml) {
+    // The same page (it says the article is not available), but answered as "not found" so search
+    // engines drop it and link previews do not show a card for something that is not there.
+    const headers = new Headers(page.headers)
+    headers.set('X-Robots-Tag', 'noindex')
+    headers.set('Cache-Control', 'no-store')
+    return new Response(page.body, { status: 404, headers })
+  }
+
+  if (!meta || meta === GONE || !isHtml || !page.ok) return page
 
   const tags = headTags(meta, site.siteName)
   return new HTMLRewriter()

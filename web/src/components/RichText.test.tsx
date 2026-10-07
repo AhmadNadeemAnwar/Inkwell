@@ -30,9 +30,42 @@ describe('RichText', () => {
   it('shows an uploaded picture from the API with its description and caption', () => {
     const out = html(sections({ type: 'imageSection', attrs: { imageId: IMAGE_ID, alt: 'A chart', caption: 'Figure 1' } }))
 
-    expect(out).toContain(`/api/v1/images/${IMAGE_ID}"`)
+    expect(out).toContain(`src="/media/${IMAGE_ID}"`)
+    expect(out).not.toContain('/api/v1/images/')
     expect(out).toContain('alt="A chart"')
     expect(out).toContain('<figcaption>Figure 1</figcaption>')
+  })
+
+  it('gives a picture its size when the post has it, so the page can hold its place', () => {
+    const out = html(sections({ type: 'imageSection', attrs: { imageId: IMAGE_ID, alt: '', width: 1600, height: 900 } }))
+
+    expect(out).toContain('width="1600"')
+    expect(out).toContain('height="900"')
+  })
+
+  it.each([
+    ['only a width', { width: 1600 }],
+    ['a size of zero', { width: 0, height: 0 }],
+    ['a size given as text', { width: '1600', height: '900' }],
+    ['a fractional size', { width: 1600.5, height: 900 }],
+    ['an absurd size', { width: 999999, height: 900 }],
+  ])('shows the picture without a size when the post has %s', (_, size) => {
+    const out = html(sections({ type: 'imageSection', attrs: { imageId: IMAGE_ID, alt: '', ...size } }))
+
+    expect(out).toContain('<img')
+    expect(out).not.toContain('width=')
+    expect(out).not.toContain('height=')
+  })
+
+  it('loads the first picture at once and the others as the reader reaches them', () => {
+    const out = html(sections(
+      { type: 'imageSection', attrs: { imageId: IMAGE_ID, alt: 'first' } },
+      { type: 'textSection', content: [paragraph('Between.')] },
+      { type: 'imageSection', attrs: { imageId: '11111111-2f0b-4a53-9a3e-0e6a1f4f7c11', alt: 'second' } },
+    ))
+
+    expect(out).toMatch(/alt="first"[^>]*loading="eager"/)
+    expect(out).toMatch(/alt="second"[^>]*loading="lazy"/)
   })
 
   it('leaves the caption out when there is none', () => {

@@ -13,6 +13,13 @@ export default defineConfig({
         target: 'http://localhost:5231',
         changeOrigin: true,
       },
+      // In production /media/<id> is answered by the Worker, which keeps a copy at Cloudflare.
+      // There is no Worker in development, so the picture is fetched straight from the API.
+      '/media': {
+        target: 'http://localhost:5231',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/media\//, '/api/v1/images/'),
+      },
     },
   },
 })

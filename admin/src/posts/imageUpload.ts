@@ -28,8 +28,15 @@ export function extensionFor(contentType: string): string {
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
   new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality))
 
+export interface PreparedImage {
+  blob: Blob
+  /** The size of the picture as it will be stored, in pixels. */
+  width: number
+  height: number
+}
+
 /** Shrinks and re-encodes a picture in the browser, so uploads stay small whatever the camera produced. */
-export async function prepareImage(file: File): Promise<Blob> {
+export async function prepareImage(file: File): Promise<PreparedImage> {
   if (!file.type.startsWith('image/')) throw new Error('That file is not a picture.')
 
   let bitmap: ImageBitmap
@@ -42,7 +49,7 @@ export async function prepareImage(file: File): Promise<Blob> {
   try {
     const size = fitWithin(bitmap.width, bitmap.height)
     const unchanged = size.width === bitmap.width && size.height === bitmap.height
-    if (unchanged && file.size <= KEEP_ORIGINAL_BELOW && ACCEPTED.includes(file.type)) return file
+    if (unchanged && file.size <= KEEP_ORIGINAL_BELOW && ACCEPTED.includes(file.type)) return { blob: file, ...size }
 
     const canvas = document.createElement('canvas')
     canvas.width = size.width
@@ -57,13 +64,15 @@ export async function prepareImage(file: File): Promise<Blob> {
     if (!blob) throw new Error('This browser cannot prepare pictures for upload.')
     if (blob.size > MAX_UPLOAD_BYTES) throw new Error('That picture is still too large after shrinking. Try a smaller one.')
 
-    return blob
+    return { blob, ...size }
   } finally {
     bitmap.close()
   }
 }
 
-export async function uploadImage(file: File): Promise<StoredImage> {
-  const blob = await prepareImage(file)
-  return api.uploadImage(blob, `upload.${extensionFor(blob.type)}`)
+/** Uploads a picture and returns where it is stored, together with its size. */
+export async function uploadImage(file: File): Promise<StoredImage & { width: number; height: number }> {
+  const { blob, width, height } = await prepareImage(file)
+  const stored = await api.uploadImage(blob, `upload.${extensionFor(blob.type)}`)
+  return { ...stored, width, height }
 }

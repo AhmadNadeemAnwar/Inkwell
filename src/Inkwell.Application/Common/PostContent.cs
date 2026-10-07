@@ -25,6 +25,9 @@ public static class PostContent
     public const int MaxReferenceTitleLength = 200;
     public const int MaxUrlLength = 2048;
 
+    /// <summary>Far larger than any picture the editor produces (it shrinks them to 1600), but small enough to be a real size.</summary>
+    public const int MaxImageDimension = 20_000;
+
     private const string NotADocument = "Post content must be a valid editor document.";
 
     public static void Validate(string contentJson)
@@ -89,6 +92,13 @@ public static class PostContent
         if (!Guid.TryParse(Text(attrs, "imageId"), out _))
             throw new DomainException("An image section has no picture. Upload one or remove the section.");
 
+        // The picture's size is optional (older posts have none). When present it lets a page keep the
+        // picture's space free while it loads, so it has to be a believable size, and both or neither.
+        var width = Dimension(attrs, "width");
+        var height = Dimension(attrs, "height");
+        if (width == Invalid || height == Invalid || (width is null) != (height is null))
+            throw new DomainException("An image section has a size that is not valid. Upload the picture again.");
+
         if ((Text(attrs, "alt")?.Length ?? 0) > MaxCaptionLength || (Text(attrs, "caption")?.Length ?? 0) > MaxCaptionLength)
             throw new DomainException($"Image descriptions and captions can be at most {MaxCaptionLength} characters.");
     }
@@ -114,6 +124,15 @@ public static class PostContent
             if (!string.IsNullOrWhiteSpace(url) && (url.Length > MaxUrlLength || !UrlRules.IsHttpOrHttps(url)))
                 throw new DomainException($"The link for \"{title}\" must start with http:// or https://.");
         }
+    }
+
+    private const int Invalid = -1;
+
+    /// <summary>Null when absent, <see cref="Invalid"/> when present but not a whole number in range.</summary>
+    private static int? Dimension(JsonElement attrs, string name)
+    {
+        if (attrs.ValueKind != JsonValueKind.Object || !attrs.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null) return null;
+        return value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) && number is >= 1 and <= MaxImageDimension ? number : Invalid;
     }
 
     private static string? TypeOf(JsonElement element) =>

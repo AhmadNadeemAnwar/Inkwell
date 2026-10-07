@@ -1,7 +1,16 @@
 // Pure helpers for the Cloudflare program in front of the public site (see index.js). Nothing here
 // touches the network, so every rule can be unit tested.
 
-const STORED_IMAGE = /^\/api\/v1\/images\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+const STORED_IMAGE = new RegExp(`^/api/v1/images/(${UUID})$`, 'i')
+const MEDIA_PATH = new RegExp(`^/media/(${UUID})$`, 'i')
+const IMAGE_ID = new RegExp(`^${UUID}$`, 'i')
+
+/** The only kinds of file the picture address will ever serve, whatever the API answers with. */
+export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+/** How long a remembered preview is used before it is checked against the API again in the background. */
+export const PREVIEW_FRESH_MS = 5 * 60 * 1000
 const SLUG = /^[a-z0-9][a-z0-9-]{0,119}$/
 
 export const DESCRIPTION_LENGTH = 200
@@ -51,7 +60,43 @@ export function slugFromPath(pathname) {
   return SLUG.test(slug) ? slug : null
 }
 
-/** The words of a stored post body, in order, with formatting dropped. */
+/** The picture id in a /media/<id> address, or null if the address is not exactly that shape. */
+export function mediaIdFromPath(pathname) {
+  const match = MEDIA_PATH.exec(pathname)
+  return match ? match[1].toLowerCase() : null
+}
+
+/** Where an old /p/<post> address should send people, or null if the path is not one. */
+export function oldPostRedirect(pathname) {
+  const match = /^\/p\/([^/]+)\/?$/.exec(pathname)
+  if (!match) return null
+  const slug = slugFromPath(pathname)
+  return slug ? `/read/${slug}` : null
+}
+
+/** The first picture inside a post body, used for the preview when the post has no cover. */
+export function firstImageId(contentJson) {
+  let root
+  try {
+    root = JSON.parse(contentJson)
+  } catch {
+    return null
+  }
+  const sections = root && Array.isArray(root.content) ? root.content : []
+  for (const section of sections) {
+    const id = section && section.type === 'imageSection' ? section.attrs?.imageId : null
+    if (typeof id === 'string' && IMAGE_ID.test(id)) return id.toLowerCase()
+  }
+  return null
+}
+
+/** True once a remembered preview is old enough to be checked again. Anything without a readable time counts as old. */
+export function isStale(fetchedAt, now = Date.now()) {
+  const at = typeof fetchedAt === 'number' ? fetchedAt : NaN
+  return !(now - at < PREVIEW_FRESH_MS)
+}
+
+/** The words of a stored post body, in order, with formatting dropped. Picture captions are left out: they label a picture, they are not the article. */
 export function plainText(contentJson) {
   let root
   try {
@@ -64,8 +109,6 @@ export function plainText(contentJson) {
   const walk = (node) => {
     if (!node || typeof node !== 'object') return
     if (typeof node.text === 'string') parts.push(node.text)
-    // A caption is its own sentence: without the space it would run into the paragraph after it.
-    if (node.type === 'imageSection' && typeof node.attrs?.caption === 'string') parts.push(node.attrs.caption, ' ')
     if (Array.isArray(node.content)) {
       node.content.forEach(walk)
       // Blocks are separate sentences, not one run-on word.
@@ -85,11 +128,15 @@ export function summarise(text, max = DESCRIPTION_LENGTH) {
   return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s.,;:!?-]+$/, '')}…`
 }
 
-/** A picture address a preview may use: one uploaded to this site, or an https link. Anything else is dropped. */
-export function absoluteImage(value, apiBase) {
+/**
+ * A picture address a preview may use: one uploaded to this site (served from the site's own
+ * /media/ address, which Cloudflare keeps a copy of), or an https link. Anything else is dropped.
+ */
+export function absoluteImage(value, siteOrigin) {
   if (typeof value !== 'string' || value.trim() === '') return null
   const trimmed = value.trim()
-  if (STORED_IMAGE.test(trimmed)) return `${apiBase}${trimmed}`
+  const stored = STORED_IMAGE.exec(trimmed)
+  if (stored) return `${siteOrigin}/media/${stored[1].toLowerCase()}`
   try {
     const url = new URL(trimmed)
     return url.protocol === 'https:' ? url.toString() : null
@@ -99,7 +146,10 @@ export function absoluteImage(value, apiBase) {
 }
 
 /** What a shared link to a post should show. */
-export function describePost(post, { siteName, siteOrigin, apiBase }) {
+export function describePost(post, { siteName, siteOrigin }) {
+  // The cover if there is one, otherwise the first picture in the article.
+  const inArticle = firstImageId(post.contentJson)
+  const image = absoluteImage(post.coverImageUrl, siteOrigin) ?? (inArticle ? `${siteOrigin}/media/${inArticle}` : null)
   const description = summarise(post.subtitle || plainText(post.contentJson) || `An article on ${siteName}.`)
   return {
     title: `${post.title} · ${siteName}`,
@@ -107,7 +157,7 @@ export function describePost(post, { siteName, siteOrigin, apiBase }) {
     description,
     // Always the /read/ address, so a post shared through an old /p/ link is still treated as one page.
     url: `${siteOrigin}/read/${post.slug}`,
-    image: absoluteImage(post.coverImageUrl, apiBase),
+    image,
     author: post.author?.displayName ?? null,
     publishedAt: post.publishedAt ?? null,
   }

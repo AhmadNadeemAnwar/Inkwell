@@ -95,7 +95,7 @@ function ImageEditor({ section, onChange }: { section: ImageSection; onChange: (
     setError(null)
     try {
       const image = await uploadImage(file)
-      onChange({ imageId: image.id })
+      onChange({ imageId: image.id, width: image.width, height: image.height })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That picture could not be uploaded.')
     } finally {
@@ -110,11 +110,22 @@ function ImageEditor({ section, onChange }: { section: ImageSection; onChange: (
 
       {section.imageId ? (
         <>
-          <img className="section__image" src={imageUrl(section.imageId)} alt={section.alt} />
+          <img
+            className="section__image"
+            src={imageUrl(section.imageId)}
+            alt={section.alt}
+            // Pictures added before sizes were kept get theirs filled in here, the next time the post is saved.
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget
+              if (section.width === null && naturalWidth > 0 && naturalHeight > 0) onChange({ width: naturalWidth, height: naturalHeight })
+            }}
+          />
           <div className="field">
             <label htmlFor={`alt-${section.key}`}>Describe the picture</label>
             <input id={`alt-${section.key}`} value={section.alt} maxLength={MAX_CAPTION} onChange={(e) => onChange({ alt: e.target.value })} />
-            <p className="field__hint">Read aloud to people who cannot see it, and helps the post be found. Not shown on the page.</p>
+            {section.alt.trim() === ''
+              ? <p className="field__hint field__hint--warn">No description yet. Someone using a screen reader hears nothing for this picture, and search engines cannot tell what it shows.</p>
+              : <p className="field__hint">Read aloud to people who cannot see it, and helps the post be found. Not shown on the page.</p>}
           </div>
           <div className="field">
             <label htmlFor={`caption-${section.key}`}>Caption (optional)</label>

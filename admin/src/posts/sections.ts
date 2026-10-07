@@ -6,7 +6,7 @@
  * Stored shape (checked again by the API before it is saved):
  *   { type: "sections", content: [
  *       { type: "textSection", content: [...rich text blocks] },
- *       { type: "imageSection", attrs: { imageId, alt, caption } },
+ *       { type: "imageSection", attrs: { imageId, alt, caption, width?, height? } },
  *       { type: "referencesSection", attrs: { items: [{ title, url }] } } ] }
  *
  * Posts written before sections existed are a single { type: "doc" } and open as one text section.
@@ -19,7 +19,8 @@ export interface Reference {
 
 export type Section =
   | { key: string; type: 'text'; doc: string }
-  | { key: string; type: 'image'; imageId: string | null; alt: string; caption: string }
+  /** `width` and `height` are the stored picture's size in pixels, or null for pictures added before sizes were kept. */
+  | { key: string; type: 'image'; imageId: string | null; alt: string; caption: string; width: number | null; height: number | null }
   | { key: string; type: 'references'; items: Reference[] }
 
 export type SectionType = Section['type']
@@ -40,7 +41,7 @@ const newKey = () => `s${Date.now().toString(36)}${(counter++).toString(36)}`
 export function newSection(type: SectionType): Section {
   switch (type) {
     case 'text': return { key: newKey(), type, doc: EMPTY_DOC }
-    case 'image': return { key: newKey(), type, imageId: null, alt: '', caption: '' }
+    case 'image': return { key: newKey(), type, imageId: null, alt: '', caption: '', width: null, height: null }
     case 'references': return { key: newKey(), type, items: [{ title: '', url: '' }] }
   }
 }
@@ -48,6 +49,13 @@ export function newSection(type: SectionType): Section {
 const text = (value: unknown): string => (typeof value === 'string' ? value : '')
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export const MAX_IMAGE_DIMENSION = 20_000
+
+/** A picture dimension the API will accept, or null. */
+export function toDimension(value: unknown): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= MAX_IMAGE_DIMENSION ? value : null
+}
 
 /** Turns a stored body into sections. Anything unreadable opens as one empty text section rather than failing. */
 export function parseContent(json: string | null | undefined): Section[] {
@@ -76,7 +84,14 @@ export function parseContent(json: string | null | undefined): Section[] {
       sections.push({ key: newKey(), type: 'text', doc: JSON.stringify({ type: 'doc', content }) })
     } else if (raw.type === 'imageSection') {
       const imageId = text(attrs.imageId)
-      sections.push({ key: newKey(), type: 'image', imageId: GUID.test(imageId) ? imageId : null, alt: text(attrs.alt), caption: text(attrs.caption) })
+      const width = toDimension(attrs.width)
+      const height = toDimension(attrs.height)
+      // A size is only useful, and only accepted by the API, as a pair.
+      const sized = width !== null && height !== null
+      sections.push({
+        key: newKey(), type: 'image', imageId: GUID.test(imageId) ? imageId : null, alt: text(attrs.alt), caption: text(attrs.caption),
+        width: sized ? width : null, height: sized ? height : null,
+      })
     } else if (raw.type === 'referencesSection') {
       const items = Array.isArray(attrs.items) ? attrs.items.filter(isObject).map((item) => ({ title: text(item.title), url: text(item.url) })) : []
       sections.push({ key: newKey(), type: 'references', items })
@@ -108,7 +123,15 @@ export function serializeContent(sections: Section[]): string {
       content.push({ type: 'textSection', content: docContent(section.doc) })
     } else if (section.type === 'image') {
       if (!section.imageId) continue
-      content.push({ type: 'imageSection', attrs: { imageId: section.imageId, alt: section.alt.trim(), caption: section.caption.trim() } })
+      const width = toDimension(section.width)
+      const height = toDimension(section.height)
+      content.push({
+        type: 'imageSection',
+        attrs: {
+          imageId: section.imageId, alt: section.alt.trim(), caption: section.caption.trim(),
+          ...(width !== null && height !== null ? { width, height } : {}),
+        },
+      })
     } else {
       const items = section.items
         .map((item) => ({ title: item.title.trim(), url: item.url.trim() }))
@@ -165,6 +188,11 @@ export function isWebAddress(value: string): boolean {
   } catch {
     return false
   }
+}
+
+/** How many pictures in the post have no description for people who cannot see them. */
+export function countUndescribedImages(sections: Section[]): number {
+  return sections.filter((section) => section.type === 'image' && section.imageId !== null && section.alt.trim() === '').length
 }
 
 /** The first thing that would stop a save, in words the writer can act on, or null if nothing would. */

@@ -15,6 +15,9 @@ public interface IActivityLog
     Task RecordAsync(string actor, string action, string? subject = null, CancellationToken ct = default);
 
     Task<PagedResult<ActivityDto>> GetPageAsync(int pageNumber, int pageSize, CancellationToken ct = default);
+
+    /// <summary>How many times this action has been recorded since the given moment.</summary>
+    Task<int> CountSinceAsync(string action, DateTimeOffset since, CancellationToken ct = default);
 }
 
 /// <summary>The wording used in the history, kept in one place so the same action always reads the same.</summary>
@@ -40,6 +43,7 @@ public static class Activity
     public const string DeletedCategory = "Deleted category";
     public const string NotifiedSubscribers = "Emailed subscribers about a post";
     public const string RemovedSubscriber = "Removed a subscriber";
+    public const string GeneratedImage = "Generated a picture";
 
     public static ActivityDto ToDto(this ActivityEntry entry) => new(entry.Id, entry.At, entry.Actor, entry.Action, entry.Subject);
 }
@@ -53,4 +57,6 @@ public sealed class NoActivityLog : IActivityLog
 
     public Task<PagedResult<ActivityDto>> GetPageAsync(int pageNumber, int pageSize, CancellationToken ct = default) =>
         Task.FromResult(new PagedResult<ActivityDto>([], pageNumber, pageSize, 0));
+
+    public Task<int> CountSinceAsync(string action, DateTimeOffset since, CancellationToken ct = default) => Task.FromResult(0);
 }

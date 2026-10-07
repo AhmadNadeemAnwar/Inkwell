@@ -47,6 +47,9 @@ public sealed class ActivityLog : IActivityLog
         }
     }
 
+    public Task<int> CountSinceAsync(string action, DateTimeOffset since, CancellationToken ct = default) =>
+        _db.ActivityEntries.CountAsync(e => e.Action == action && e.At >= since, ct);
+
     public async Task<PagedResult<ActivityDto>> GetPageAsync(int pageNumber, int pageSize, CancellationToken ct = default)
     {
         var query = _db.ActivityEntries.AsNoTracking();

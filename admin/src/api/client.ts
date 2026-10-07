@@ -1,7 +1,8 @@
+import type { GrammarMatch } from '../posts/grammar'
 import type {
   ActivityEntry, AdminComment, AdminPost, AdminTag, Category, Collection, NotifyResult, Subscriber, SubscribersSummary, Frontmatter, Paged, PortfolioEntry, PortfolioStatus,
   PortfolioSummary, PostDraft, PostInput, PostRevision, PostRevisionDetail, PostStatus, PostTag, Profile, ProfileInput,
-  Session, SiteSettings, Stats, StoredImage,
+  GeneratedImage, GenerationStatus, Session, SiteSettings, Stats, StoredImage,
 } from './types'
 
 // Empty in development (Vite proxies /api); the production build bakes in the API's absolute URL.
@@ -163,6 +164,10 @@ export const api = {
     form.append('file', file, name)
     return request<StoredImage>('POST', '/api/v1/images', form)
   },
+  imageGenerationStatus: () => request<GenerationStatus>('GET', '/api/v1/admin/images/generation'),
+  generateImage: (prompt: string) => request<GeneratedImage>('POST', '/api/v1/admin/images/generate', { prompt }),
+  /** Spelling and grammar suggestions for plain text. */
+  checkGrammar: (text: string) => request<{ matches: GrammarMatch[] }>('POST', '/api/v1/admin/grammar/check', { text }),
   revisions: (id: string) => request<PostRevision[]>('GET', `/api/v1/posts/${id}/revisions`),
   revision: (id: string, revisionId: string) => request<PostRevisionDetail>('GET', `/api/v1/posts/${id}/revisions/${revisionId}`),
   suggestTags: (q: string) => request<PostTag[]>('GET', `/api/v1/tags/suggest${query({ q })}`),

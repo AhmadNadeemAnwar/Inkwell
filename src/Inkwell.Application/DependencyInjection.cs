@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IAdminAuthService, AdminAuthService>();
         services.AddScoped<IPortfolioService, PortfolioService>();
         services.AddScoped<IImageService, ImageService>();
+        services.AddScoped<IImageGenerationService, ImageGenerationService>();
         services.AddScoped<ISiteService, SiteService>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
 

@@ -225,3 +225,18 @@ export interface PortfolioEntry {
   frontmatter: Frontmatter
   body: string
 }
+
+/** Whether picture generation is set up, and how much of today's allowance is used. */
+export interface GenerationStatus {
+  enabled: boolean
+  usedToday: number
+  dailyLimit: number
+}
+
+/** A generated picture, as a preview. It is stored only if the writer keeps it. */
+export interface GeneratedImage {
+  imageBase64: string
+  contentType: string
+  usedToday: number
+  dailyLimit: number
+}

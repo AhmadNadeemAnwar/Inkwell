@@ -8,6 +8,7 @@ import {
 } from '../posts/sections'
 import type { Reference, Section, SectionType } from '../posts/sections'
 import { useConfirm } from './feedback'
+import { GenerateImagePanel } from './GenerateImagePanel'
 import { RichEditor } from './RichEditor'
 import { ErrorNote } from './ui'
 
@@ -84,6 +85,7 @@ function ImageEditor({ section, onChange }: { section: ImageSection; onChange: (
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
 
   async function choose(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -102,6 +104,17 @@ function ImageEditor({ section, onChange }: { section: ImageSection; onChange: (
       setBusy(false)
     }
   }
+
+  // A generated picture takes the description as its text for screen readers only if none was written yet.
+  const panel = (
+    <GenerateImagePanel
+      onClose={() => setGenerating(false)}
+      onKeep={({ imageId, width, height, alt }) => {
+        onChange({ imageId, width, height, ...(section.alt.trim() === '' ? { alt } : {}) })
+        setGenerating(false)
+      }}
+    />
+  )
 
   return (
     <div className="section__body">
@@ -131,16 +144,22 @@ function ImageEditor({ section, onChange }: { section: ImageSection; onChange: (
             <label htmlFor={`caption-${section.key}`}>Caption (optional)</label>
             <input id={`caption-${section.key}`} value={section.caption} maxLength={MAX_CAPTION} onChange={(e) => onChange({ caption: e.target.value })} />
           </div>
-          <button type="button" className="btn btn--small" disabled={busy} onClick={() => input.current?.click()}>
-            {busy ? 'Uploading…' : 'Replace picture'}
-          </button>
+          <div className="generate__actions">
+            <button type="button" className="btn btn--small" disabled={busy} onClick={() => input.current?.click()}>
+              {busy ? 'Uploading…' : 'Replace picture'}
+            </button>
+            {!generating && <button type="button" className="btn btn--small" onClick={() => setGenerating(true)}>Generate a different one</button>}
+          </div>
+          {generating && panel}
         </>
       ) : (
         <div className="section__drop">
           <button type="button" className="btn btn--primary" disabled={busy} onClick={() => input.current?.click()}>
             {busy ? 'Uploading…' : 'Choose a picture'}
           </button>
+          {!generating && <button type="button" className="btn" onClick={() => setGenerating(true)}>Generate with AI</button>}
           <p className="field__hint">JPEG, PNG or WebP. Large pictures are shrunk automatically before they are uploaded.</p>
+          {generating && panel}
         </div>
       )}
     </div>

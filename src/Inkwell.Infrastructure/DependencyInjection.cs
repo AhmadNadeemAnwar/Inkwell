@@ -1,5 +1,9 @@
 using Inkwell.Application.Subscriptions;
+using Inkwell.Application.Grammar;
 using Inkwell.Infrastructure.Email;
+using Inkwell.Application.Images;
+using Inkwell.Infrastructure.Grammar;
+using Inkwell.Infrastructure.Images;
 using Inkwell.Application.Admin;
 using Inkwell.Application.Common;
 using Inkwell.Application.Portfolio;
@@ -51,6 +55,12 @@ public static class DependencyInjection
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.AddHttpClient<IEmailSender, BrevoEmailSender>();
         services.AddSingleton<ISubscriberTokens, SubscriberTokens>();
+
+        services.Configure<GrammarOptions>(configuration.GetSection(GrammarOptions.SectionName));
+        services.AddHttpClient<IGrammarChecker, LanguageToolChecker>();
+
+        services.Configure<ImageGenerationOptions>(configuration.GetSection(ImageGenerationOptions.SectionName));
+        services.AddHttpClient<IImageGenerator, CloudflareImageGenerator>();
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();

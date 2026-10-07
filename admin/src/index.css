@@ -466,3 +466,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-vi
 .category-add input { max-width: 26rem; }
 
 .note--setup { background: var(--warn-soft); color: var(--text); border: 1px solid transparent; }
+
+/* Grammar check, under a text section */
+.grammar { margin-top: 0.75rem; }
+.grammar__bar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.grammar__list { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.grammar__item { border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.75rem; background: var(--bg-subtle); }
+.grammar__word { font-weight: 600; text-decoration: underline wavy var(--warn); text-underline-offset: 3px; }
+.grammar__message { margin: 0.2rem 0 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
+.grammar__actions { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+
+/* Picture generation, inside an image section */
+.generate { margin-top: 0.75rem; border: 1px dashed var(--border); border-radius: 6px; padding: 0.75rem; }
+.generate textarea { width: 100%; font: inherit; resize: vertical; }
+.generate__preview { margin: 0.5rem 0; }
+.generate__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }

@@ -4,6 +4,7 @@ import type { Editor as TiptapEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
+import { GrammarPanel } from './GrammarPanel'
 
 interface Props {
   /** Stored ProseMirror JSON, or null for a new post. */
@@ -39,6 +40,7 @@ export function RichEditor({ initialContent, onChange }: Props) {
     <>
       <Toolbar editor={editor} />
       <EditorContent editor={editor} className="prose" />
+      <GrammarPanel editor={editor} />
     </>
   )
 }

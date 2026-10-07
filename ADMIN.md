@@ -178,6 +178,36 @@ activated for sending).
 - Every email has an unsubscribe link. Unsubscribed addresses are kept, marked as such, so they are
   never emailed by mistake; **Remove** deletes an address entirely.
 
+## Picture generation (optional, about 10 minutes)
+
+The editor can make a picture from a description, on Cloudflare's **free** Workers AI allowance
+(10,000 "neurons" a day, which is well over 20 pictures). Until the steps below are done, the
+*Generate with AI* button only explains that it is not set up.
+
+**If any step asks for a card or offers to upgrade, stop and do not enter anything.** On the free plan
+a spent allowance makes the request fail; it never bills you. Do not switch the account to
+*Workers Paid*. As a second safeguard the site itself refuses after **20 pictures a UTC day**,
+counted in the database, so a restart does not reset it.
+
+1. **Find your account id.** In the Cloudflare dashboard open *Workers & Pages*. The *Account ID* is
+   in the right-hand column. Copy it. It is an identifier, not a secret.
+2. **Create a token.** Open *My Profile* (top right) → *API Tokens* → *Create Token*. Choose the
+   **Workers AI** template (or *Create Custom Token* with the permission *Account → Workers AI → Read*
+   plus *Edit* if offered), restrict it to your account, and create it. Copy the token now; Cloudflare
+   shows it once.
+3. **Give both to the API.** In Render open the Inkwell service → *Environment* and add
+   `ImageGeneration__AccountId` (the id) and `ImageGeneration__ApiToken` (the token). Save; Render
+   redeploys. Never paste the token into this repository, the workboard or a chat.
+4. **Try it.** In the editor add an *Image* section and press *Generate with AI*.
+
+How it behaves: you describe the picture, wait up to half a minute, and see a **preview**. Nothing is
+stored until you press *Keep this picture*; *Try again* makes another (it counts toward the 20). A kept
+picture is shrunk and stored like any upload, and its description fills *Describe the picture* if that
+was empty. Your description is sent to Cloudflare. Every picture made is listed in the *Activity* page.
+
+If it fails: *Cloudflare refused the request* means the token or its permission is wrong (make a new
+one, update Render). *Free allowance is used up* means wait for midnight UTC.
+
 ## Using it
 
 **Writing:** *New post* (on the Dashboard and the Posts page) opens the editor; *Edit* appears beside
@@ -188,6 +218,12 @@ every post that is yours.
   longer side at most) and stored in the site's own database, so no other service is involved.
   JPEG, PNG and WebP only. *Describe the picture* is read aloud to people who cannot see it.
 - **References:** a numbered list of sources. Each needs a title; the link is optional.
+- **Check grammar:** under every text section. It sends that section's text to LanguageTool's free
+  public service and lists spelling and grammar suggestions. Nothing changes until you press a
+  suggested word (it replaces the flagged words, keeping bold or links), and *Ignore* dismisses one.
+  Only the section you press the button on is sent; no reader data is involved. Free and needs no
+  account or key. Limits: 15 checks a minute, and about 15,000 characters per section; if the service
+  is busy you get a message to try again. Sections longer than the limit need splitting in two.
 - A post that readers cannot see saves itself a few seconds after you stop typing. A published post
   is live, so changes to it wait until you press *Save changes*.
 

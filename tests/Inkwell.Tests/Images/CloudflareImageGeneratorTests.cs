@@ -12,10 +12,11 @@ namespace Inkwell.Tests.Images;
 
 public class CloudflareImageGeneratorTests
 {
+    private const string ValidId = "9abb8165ab250861d49f8f0f289a0823";
     private static readonly byte[] Picture = [0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3];
     private static readonly string Base64 = Convert.ToBase64String(Picture);
 
-    private static ImageGenerationOptions Configured() => new() { AccountId = "acct123", ApiToken = "secret-token" };
+    private static ImageGenerationOptions Configured() => new() { AccountId = ValidId, ApiToken = "secret-token" };
 
     private static CloudflareImageGenerator Generator(HttpMessageHandler handler, ImageGenerationOptions? options = null) =>
         new(new HttpClient(handler), Options.Create(options ?? Configured()), NullLogger<CloudflareImageGenerator>.Instance);
@@ -57,7 +58,7 @@ public class CloudflareImageGeneratorTests
 
         var (request, body) = handler.Calls.Single();
         request.Method.Should().Be(HttpMethod.Post);
-        request.RequestUri!.AbsoluteUri.Should().Be("https://api.cloudflare.com/client/v4/accounts/acct123/ai/run/@cf/black-forest-labs/flux-1-schnell");
+        request.RequestUri!.AbsoluteUri.Should().Be("https://api.cloudflare.com/client/v4/accounts/"+ValidId+"/ai/run/@cf/black-forest-labs/flux-1-schnell");
         request.Headers.Authorization!.ToString().Should().Be("Bearer secret-token");
         var json = JsonDocument.Parse(body).RootElement;
         json.GetProperty("prompt").GetString().Should().Be("a \"quoted\" lighthouse");
@@ -113,9 +114,36 @@ public class CloudflareImageGeneratorTests
     }
 
     [Fact]
+    public async Task Spaces_and_line_breaks_pasted_around_the_settings_are_ignored()
+    {
+        var handler = Succeeding();
+        var options = new ImageGenerationOptions { AccountId = "\n" + ValidId + " ", ApiToken = " secret-token\r\n" };
+
+        await Generator(handler, options).GenerateAsync("a lighthouse");
+
+        var (request, _) = handler.Calls.Single();
+        request.RequestUri!.AbsoluteUri.Should().Contain("/accounts/" + ValidId + "/ai/run");
+        request.Headers.Authorization!.ToString().Should().Be("Bearer secret-token");
+    }
+
+    [Theory]
+    [InlineData("9abb8165ab250861d49f8f0f289a082")]       // one character short
+    [InlineData("9abb8165ab250861d49f8f0f289a08234")]     // one too long
+    [InlineData("zabb8165ab250861d49f8f0f289a0823")]      // not hexadecimal
+    public async Task An_account_id_of_the_wrong_shape_is_explained_and_never_sent(string id)
+    {
+        var handler = Succeeding();
+
+        var act = () => Generator(handler, new ImageGenerationOptions { AccountId = id, ApiToken = "secret-token" }).GenerateAsync("a lighthouse");
+
+        (await act.Should().ThrowAsync<DomainException>()).WithMessage("*account ID*32*");
+        handler.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task The_message_includes_what_Cloudflare_said_so_a_setup_mistake_can_be_found()
     {
-        var handler = Replying(HttpStatusCode.NotFound, "{\"success\":false,\"errors\":[{\"code\":7003,\"message\":\"Could not route to /accounts/acct123/ai/run\"}]}");
+        var handler = Replying(HttpStatusCode.NotFound, "{\"success\":false,\"errors\":[{\"code\":7003,\"message\":\"Could not route to /accounts/"+ValidId+"/ai/run\"}]}");
 
         var act = () => Generator(handler).GenerateAsync("a lighthouse");
 

@@ -44,19 +44,29 @@ public sealed class CloudflareImageGenerator : IImageGenerator
 
     public bool IsEnabled => !string.IsNullOrWhiteSpace(_options.AccountId) && !string.IsNullOrWhiteSpace(_options.ApiToken);
 
+    // Pasting into a settings box often brings a space or line break along; neither belongs in a URL or a header.
+    private string AccountId => _options.AccountId.Trim();
+    private string ApiToken => _options.ApiToken.Trim();
+
+    /// <summary>A Cloudflare account id is 32 hexadecimal characters.</summary>
+    internal static bool IsValidAccountId(string value) => value.Length == 32 && value.All(Uri.IsHexDigit);
+
     public async Task<byte[]> GenerateAsync(string prompt, CancellationToken ct = default)
     {
+        if (!IsValidAccountId(AccountId))
+            throw new DomainException($"The Cloudflare account ID on the server looks wrong: it should be 32 letters and digits, and this one has {AccountId.Length}. Copy it again from Workers & Pages and save ImageGeneration__AccountId on Render.");
+
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeout.CancelAfter(Timeout);
 
-            var url = $"{_options.BaseUrl.TrimEnd('/')}/client/v4/accounts/{Uri.EscapeDataString(_options.AccountId)}/ai/run/{_options.Model}";
+            var url = $"{_options.BaseUrl.TrimEnd('/')}/client/v4/accounts/{Uri.EscapeDataString(AccountId)}/ai/run/{_options.Model}";
             using var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = new StringContent(JsonSerializer.Serialize(new { prompt, steps = Math.Clamp(_options.Steps, 1, 8) }), Encoding.UTF8, "application/json")
             };
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _options.ApiToken);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ApiToken);
 
             using var response = await _http.SendAsync(request, timeout.Token);
             var body = await response.Content.ReadAsStringAsync(timeout.Token);

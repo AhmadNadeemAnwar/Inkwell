@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  FETCHER_TIMEOUT_MS, PREVIEW_FRESH_MS, READER_TIMEOUT_MS, absoluteImage, firstImageId, isStale, mediaIdFromPath, oldPostRedirect, buildRss, buildSitemap, describePost, escapeText, headTags, plainText,
+  DEFAULT_SHARE_IMAGE, FETCHER_TIMEOUT_MS, PREVIEW_FRESH_MS, READER_TIMEOUT_MS, absoluteImage, firstImageId, isStale, mediaIdFromPath, oldPostRedirect, buildRss, buildSitemap, describePost, escapeText, headTags, plainText,
   slugFromPath, summarise, timeoutFor,
 } from './meta.js'
 
@@ -252,8 +252,22 @@ describe('headTags', () => {
     expect(tags).toContain('<meta name="description" content="First paragraph. Second paragraph.">')
   })
 
-  it('uses the small card and leaves picture tags out when there is no picture', () => {
-    const tags = headTags(describePost(post(), SITE), 'Inkwell')
+  it('shares a post with no picture of its own using the Inkwell logo card', () => {
+    const meta = describePost(post(), SITE)
+    const tags = headTags(meta, 'Inkwell')
+
+    expect(meta.image).toBe('https://inkwell.example/inkwell-share.png')
+    expect(DEFAULT_SHARE_IMAGE).toBe('/inkwell-share.png')
+    expect(tags).toContain('<meta name="twitter:card" content="summary_large_image">')
+    expect(tags).toContain('<meta property="og:image" content="https://inkwell.example/inkwell-share.png">')
+  })
+
+  it('prefers the posts own picture over the logo card', () => {
+    expect(describePost(post({ coverImageUrl: 'https://images.example/cover.jpg' }), SITE).image).toBe('https://images.example/cover.jpg')
+  })
+
+  it('uses the small card and leaves picture tags out when the meta has no picture at all', () => {
+    const tags = headTags({ ...describePost(post(), SITE), image: null }, 'Inkwell')
 
     expect(tags).toContain('<meta name="twitter:card" content="summary">')
     expect(tags).not.toContain('og:image')

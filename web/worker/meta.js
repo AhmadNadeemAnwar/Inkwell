@@ -145,11 +145,15 @@ export function absoluteImage(value, siteOrigin) {
   }
 }
 
+/** The logo card shown when a shared link has no picture. A file in web/public. */
+export const DEFAULT_SHARE_IMAGE = '/inkwell-share.png'
+
 /** What a shared link to a post should show. */
 export function describePost(post, { siteName, siteOrigin }) {
   // The cover if there is one, otherwise the first picture in the article.
   const inArticle = firstImageId(post.contentJson)
-  const image = absoluteImage(post.coverImageUrl, siteOrigin) ?? (inArticle ? `${siteOrigin}/media/${inArticle}` : null)
+  // With no picture of its own, a post is shared with the site's logo card instead of a bare text preview.
+  const image = absoluteImage(post.coverImageUrl, siteOrigin) ?? (inArticle ? `${siteOrigin}/media/${inArticle}` : `${siteOrigin}${DEFAULT_SHARE_IMAGE}`)
   const description = summarise(post.subtitle || plainText(post.contentJson) || `An article on ${siteName}.`)
   return {
     title: `${post.title} · ${siteName}`,

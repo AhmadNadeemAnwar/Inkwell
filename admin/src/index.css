@@ -481,3 +481,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-vi
 .generate textarea { width: 100%; font: inherit; resize: vertical; }
 .generate__preview { margin: 0.5rem 0; }
 .generate__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+
+/* The logo: ink follows the header's text colour, the leaf stays green. Aspect ratio is the mask files' (253 x 96). */
+.logo { display: inline-block; position: relative; height: 2.25rem; aspect-ratio: 253 / 96; vertical-align: middle; }
+.logo::before, .logo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-size: contain; mask-size: contain;
+  -webkit-mask-position: left center; mask-position: left center;
+}
+.logo::before { background: var(--chrome-text); -webkit-mask-image: url('/logo-ink.png'); mask-image: url('/logo-ink.png'); }
+.logo::after { background: #6cc79b; -webkit-mask-image: url('/logo-leaf.png'); mask-image: url('/logo-leaf.png'); }
+.sidebar__brand { display: flex; align-items: center; gap: 0.5rem; }
+.sidebar__brand .logo { height: 2rem; }

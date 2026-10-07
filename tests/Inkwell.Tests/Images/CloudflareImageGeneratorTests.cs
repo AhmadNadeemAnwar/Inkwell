@@ -113,6 +113,27 @@ public class CloudflareImageGeneratorTests
     }
 
     [Fact]
+    public async Task The_message_includes_what_Cloudflare_said_so_a_setup_mistake_can_be_found()
+    {
+        var handler = Replying(HttpStatusCode.NotFound, "{\"success\":false,\"errors\":[{\"code\":7003,\"message\":\"Could not route to /accounts/acct123/ai/run\"}]}");
+
+        var act = () => Generator(handler).GenerateAsync("a lighthouse");
+
+        var thrown = (await act.Should().ThrowAsync<DomainException>()).Which;
+        thrown.Message.Should().Contain("404").And.Contain("Could not route").And.NotContain("secret-token");
+    }
+
+    [Fact]
+    public async Task A_very_long_Cloudflare_explanation_is_cut_short()
+    {
+        var handler = Replying(HttpStatusCode.BadRequest, "{\"errors\":[{\"message\":\"" + new string('x', 1000) + "\"}]}");
+
+        var act = () => Generator(handler).GenerateAsync("a lighthouse");
+
+        (await act.Should().ThrowAsync<DomainException>()).Which.Message.Length.Should().BeLessThan(400);
+    }
+
+    [Fact]
     public async Task A_network_failure_gives_a_plain_message()
     {
         var act = () => Generator(new ThrowingHandler()).GenerateAsync("a lighthouse");

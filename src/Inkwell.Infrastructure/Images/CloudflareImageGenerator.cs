@@ -99,7 +99,29 @@ public sealed class CloudflareImageGenerator : IImageGenerator
             return new DomainException("Cloudflare refused the request. The API token may be wrong or missing the Workers AI permission. See ADMIN.md.");
         }
 
-        _logger.LogWarning("Cloudflare picture request failed with {Status}", (int)status);
-        return new DomainException("The picture service could not make that picture. Try again, or word the description differently.");
+        var reason = Reason(body);
+        _logger.LogWarning("Cloudflare picture request failed with {Status}: {Reason}", (int)status, reason);
+        return new DomainException($"The picture service could not make that picture (Cloudflare answered {(int)status}{(reason.Length > 0 ? $": {reason}" : "")}). Try again, or word the description differently.");
+    }
+
+    /// <summary>Cloudflare's own explanation, kept short. It describes the request, never the token.</summary>
+    internal static string Reason(string body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array && errors.GetArrayLength() > 0
+                && errors[0].TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String)
+            {
+                var text = message.GetString() ?? string.Empty;
+                return text.Length <= 200 ? text : text[..200];
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON: nothing useful to show.
+        }
+
+        return string.Empty;
     }
 }

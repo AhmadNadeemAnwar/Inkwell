@@ -24,6 +24,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<ActivityEntry> ActivityEntries => Set<ActivityEntry>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
+    public DbSet<Subscriber> Subscribers => Set<Subscriber>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

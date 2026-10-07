@@ -61,6 +61,33 @@ export interface AdminPost {
   comments: number
   tags: string[]
   category: string | null
+  /** When subscribers were last emailed about this post, or null if never. */
+  notifiedAt: string | null
+}
+
+export interface Subscriber {
+  id: string
+  email: string
+  status: 'Pending' | 'Confirmed' | 'Unsubscribed'
+  createdAt: string
+  confirmedAt: string | null
+}
+
+export interface SubscribersSummary {
+  /** False until a mail service key and "from" address are set on the host. */
+  emailConfigured: boolean
+  confirmed: number
+  pending: number
+  unsubscribed: number
+  dailyLimit: number
+}
+
+export interface NotifyResult {
+  sent: number
+  failed: number
+  /** Confirmed subscribers who have still not been told about the post. */
+  remaining: number
+  notifiedAt: string | null
 }
 
 export interface PostTag {

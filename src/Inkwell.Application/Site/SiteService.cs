@@ -12,7 +12,8 @@ public sealed record CategoryDto(Guid Id, string Name, string Slug);
 public sealed record CategoryWithCountDto(Guid Id, string Name, string Slug, int PostCount);
 
 /// <summary>What the public site needs before it draws anything: how it should look and how posts are shelved.</summary>
-public sealed record SiteDto(string Theme, IReadOnlyList<CategoryWithCountDto> Categories);
+/// <param name="SubscribeEnabled">Whether the site can send email yet; the subscribe form is hidden until it can.</param>
+public sealed record SiteDto(string Theme, IReadOnlyList<CategoryWithCountDto> Categories, bool SubscribeEnabled = false);
 
 public sealed record SiteSettingsDto(string Theme, IReadOnlyList<string> AvailableThemes);
 

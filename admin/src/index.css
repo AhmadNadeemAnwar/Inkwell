@@ -438,3 +438,5 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-vi
 
 .category-add { margin-top: 1rem; }
 .category-add input { max-width: 26rem; }
+
+.note--setup { background: var(--warn-soft); color: var(--text); border: 1px solid transparent; }

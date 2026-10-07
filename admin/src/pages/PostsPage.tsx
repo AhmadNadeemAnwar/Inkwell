@@ -6,6 +6,7 @@ import type { AdminPost, PostStatus } from '../api/types'
 import { useAsync } from '../hooks/useAsync'
 import { useConfirm, useToast } from '../components/feedback'
 import { Empty, ErrorNote, PageHeader, Pagination, Spinner, formatDate, formatNumber, publicPostUrl, statusLabels } from '../components/ui'
+import { describeNotifyResult } from './SubscribersPage'
 
 const STATUSES: PostStatus[] = ['Draft', 'Published', 'Inactive']
 
@@ -53,6 +54,39 @@ export function PostsPage() {
   }, [search])
 
   const posts = useAsync(() => api.posts({ status, q: term, pageNumber: page, pageSize: 20 }), [status, term, page])
+  // The Notify button only appears once email is set up; if this cannot be loaded it simply stays hidden.
+  const mail = useAsync(() => api.subscribersSummary().catch(() => null), [])
+
+  async function notifySubscribers(post: AdminPost) {
+    setBusyId(post.id)
+    try {
+      const { waiting } = await api.notifyWaiting(post.id)
+      if (waiting === 0) {
+        notify(post.notifiedAt ? 'Every subscriber has already been told about this post.' : 'There are no confirmed subscribers yet.', 'error')
+        return
+      }
+
+      const ok = await confirm({
+        title: 'Email subscribers about this post?',
+        message: (
+          <>
+            {formatNumber(waiting)} {waiting === 1 ? 'subscriber gets' : 'subscribers get'} one email with a link to “{post.title}”.
+            {post.notifiedAt && <> Those already told on {formatDate(post.notifiedAt)} are not emailed again.</>} This cannot be undone.
+          </>
+        ),
+        confirmLabel: waiting === 1 ? 'Send 1 email' : `Send ${formatNumber(waiting)} emails`,
+      })
+      if (!ok) return
+
+      const outcome = describeNotifyResult(await api.notifyPost(post.id))
+      notify(outcome.message, outcome.kind)
+      posts.reload()
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'The emails could not be sent.', 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   async function changeStatus(post: AdminPost, target: PostStatus) {
     if (target === post.status) return
@@ -152,11 +186,20 @@ export function PostsPage() {
                           {STATUSES.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}
                         </select>
                       </td>
-                      <td>{formatDate(post.publishedAt)}</td>
+                      <td>
+                        {formatDate(post.publishedAt)}
+                        {post.notifiedAt && <div className="cell-sub">Emailed {formatDate(post.notifiedAt)}</div>}
+                      </td>
                       <td className="num">{formatNumber(post.views)}</td>
                       <td className="num">{formatNumber(post.claps)}</td>
                       <td className="num">{formatNumber(post.insightful)}</td>
                       <td className="actions">
+                        {post.status === 'Published' && mail.data?.emailConfigured && (
+                          <button className="btn btn--small" onClick={() => notifySubscribers(post)} disabled={busyId === post.id}
+                            title="Email subscribers a link to this post">
+                            {post.notifiedAt ? 'Notify again' : 'Notify subscribers'}
+                          </button>
+                        )}
                         {post.authorHandle === myHandle && <Link className="btn btn--small" to={`/posts/${post.id}/edit`}>Edit</Link>}
                         <button className="btn btn--small btn--danger" onClick={() => remove(post)} disabled={busyId === post.id}>Delete</button>
                       </td>

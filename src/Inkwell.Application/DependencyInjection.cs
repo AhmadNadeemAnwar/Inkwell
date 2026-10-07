@@ -7,6 +7,7 @@ using Inkwell.Application.Portfolio;
 using Inkwell.Application.Images;
 using Inkwell.Application.Posts;
 using Inkwell.Application.Site;
+using Inkwell.Application.Subscriptions;
 using Inkwell.Application.Tags;
 using Inkwell.Application.Users;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IPortfolioService, PortfolioService>();
         services.AddScoped<IImageService, ImageService>();
         services.AddScoped<ISiteService, SiteService>();
+        services.AddScoped<ISubscriptionService, SubscriptionService>();
 
         services.AddValidatorsFromAssemblyContaining<AuthService>();
 

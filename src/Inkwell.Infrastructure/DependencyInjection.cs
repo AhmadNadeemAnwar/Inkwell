@@ -1,3 +1,5 @@
+using Inkwell.Application.Subscriptions;
+using Inkwell.Infrastructure.Email;
 using Inkwell.Application.Admin;
 using Inkwell.Application.Common;
 using Inkwell.Application.Portfolio;
@@ -44,6 +46,11 @@ public static class DependencyInjection
         services.AddScoped<IReactionRepository, ReactionRepository>();
         services.AddScoped<IActivityLog, ActivityLog>();
         services.AddScoped<ISiteRepository, SiteRepository>();
+        services.AddScoped<ISubscriberRepository, SubscriberRepository>();
+
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        services.AddHttpClient<IEmailSender, BrevoEmailSender>();
+        services.AddSingleton<ISubscriberTokens, SubscriberTokens>();
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();

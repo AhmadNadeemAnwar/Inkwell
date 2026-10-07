@@ -38,6 +38,9 @@ public class Post : BaseEntity
     public DateTimeOffset? PublishedAt { get; private set; }
     public int ReadingTimeMinutes { get; private set; } = 1;
 
+    /// <summary>When subscribers were last emailed about this post; null if they never were.</summary>
+    public DateTimeOffset? NotifiedAt { get; private set; }
+
     public int ClapCount { get; private set; }
     public int InsightfulCount { get; private set; }
     public int CommentCount { get; private set; }
@@ -77,6 +80,8 @@ public class Post : BaseEntity
         CoverImageUrl = string.IsNullOrWhiteSpace(coverImageUrl) ? null : coverImageUrl.Trim();
         ReadingTimeMinutes = CalculateReadingTime(PlainText);
     }
+
+    public void MarkNotified(DateTimeOffset at) => NotifiedAt = at;
 
     public void SetCategory(Guid? categoryId)
     {

@@ -38,6 +38,8 @@ public static class Activity
     public const string AddedCategory = "Added category";
     public const string RenamedCategory = "Renamed category";
     public const string DeletedCategory = "Deleted category";
+    public const string NotifiedSubscribers = "Emailed subscribers about a post";
+    public const string RemovedSubscriber = "Removed a subscriber";
 
     public static ActivityDto ToDto(this ActivityEntry entry) => new(entry.Id, entry.At, entry.Actor, entry.Action, entry.Subject);
 }

@@ -8,6 +8,7 @@ import { PostPage } from './pages/PostPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SearchPage } from './pages/SearchPage'
+import { ConfirmSubscriptionPage, UnsubscribePage } from './pages/SubscriptionPages'
 import { TagPage } from './pages/TagPage'
 
 function NotFound() {
@@ -29,6 +30,8 @@ export default function App() {
           {/* Where posts lived before /read/. Kept so links already shared keep opening. */}
           <Route path="/p/:slug" element={<PostPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/subscribe/confirm" element={<ConfirmSubscriptionPage />} />
+          <Route path="/unsubscribe" element={<UnsubscribePage />} />
           {/* React Router cannot match a partial segment like "/@:handle", so profiles take the
               whole segment and ProfilePage requires the leading "@". Static routes above outrank
               this one, so /search, /privacy etc. are unaffected. */}

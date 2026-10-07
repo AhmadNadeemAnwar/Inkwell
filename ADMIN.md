@@ -9,6 +9,7 @@ A private site at **https://admin.ahmadnadeem.dev** for running Inkwell and edit
 | Comments | Every comment across the site: **remove** |
 | Topics | **Rename**, **merge** and **delete** tags |
 | Portfolio | Create, edit and delete your site's **blog**, **projects** and **updates** (Markdown, with a live preview) |
+| Subscribers | Readers who asked for new articles by email; **remove** an address |
 | Site | The public site's **theme**, and the **categories** posts are shelved in |
 | Profile | Your name, photo, bio and website, as readers see them beside every post |
 | Activity | A history of what has been done in the portal, kept for 180 days |
@@ -131,6 +132,51 @@ email and the current 6-digit code.
 > `admin/.env.production` and `admin/public/_headers` before building.
 
 ---
+
+## Email subscriptions (optional, about 20 minutes)
+
+Readers can subscribe on the public site and get a short email when you announce a new article.
+Until the steps below are done the subscribe form simply does not appear, and nothing else is affected.
+
+Mail is sent through **Brevo**. Its free plan allows 300 emails a day and, at the time of writing,
+asks for no card. **If any step asks for payment details, stop**: do not enter them.
+
+1. **Create the account.** Sign up at brevo.com and finish its email verification.
+2. **Prove you own the domain**, so your mail is not treated as spam. In Brevo open
+   *Senders, Domains & Dedicated IPs* → *Domains* → *Add a domain* and enter `ahmadnadeem.dev`.
+   Brevo shows a few records (a verification code, a DKIM record, and DMARC). In the Cloudflare
+   dashboard open the domain → *DNS* → *Records* and add each one exactly as shown. For any CNAME
+   record set the proxy to **DNS only** (grey cloud). Back in Brevo press *Verify*; it can take a
+   few minutes.
+3. **Add a sender.** In *Senders* add an address on your domain, for example
+   `inkwell@ahmadnadeem.dev`, with the name `Inkwell`. It does not need a mailbox to send, but replies
+   to it go nowhere unless you later set up forwarding (Cloudflare Email Routing is free).
+4. **Make an API key.** *SMTP & API* → *API Keys* → *Generate a new API key*. It is shown once.
+5. **Give it to the API.** On Render, open your service → *Environment* and add:
+
+   | Key | Value |
+   |---|---|
+   | `Email__ApiKey` | the key Brevo just showed you |
+   | `Email__FromAddress` | the sender address from step 3 |
+
+   Save, and Render redeploys. Never paste the key into chat, email or the repository.
+6. **Try it.** Open the public site, subscribe with your own address at the bottom of any page,
+   click the link in the email, and check the address shows as *Subscribed* under **Subscribers**.
+
+If a confirmation email does not arrive, look at Render → *Logs* for a line starting "Brevo refused
+an email": it says why (most often an unverified domain or sender, or an account Brevo has not yet
+activated for sending).
+
+**How it works**
+- A reader is not subscribed until they click the link in the confirmation email, so nobody can
+  sign up someone else. An address is sent at most one confirmation a day.
+- Nothing is sent automatically. After publishing, press **Notify subscribers** beside the post on
+  the Posts page. It says how many will be emailed and asks first.
+- Nobody is told about the same post twice. *Notify again* only reaches people who subscribed since.
+- If you have more subscribers than the daily allowance, one press sends the first 300; press again
+  the next day for the rest.
+- Every email has an unsubscribe link. Unsubscribed addresses are kept, marked as such, so they are
+  never emailed by mistake; **Remove** deletes an address entirely.
 
 ## Using it
 

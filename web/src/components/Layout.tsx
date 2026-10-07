@@ -2,9 +2,12 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { PORTFOLIO_URL } from '../lib/site'
+import { useSite } from '../lib/siteContext'
+import { SubscribeForm } from './SubscribeForm'
 
 export function Layout() {
   const navigate = useNavigate()
+  const { subscribeEnabled } = useSite()
   const [term, setTerm] = useState('')
 
   function onSearch(event: FormEvent) {
@@ -40,10 +43,14 @@ export function Layout() {
       <Outlet />
 
       <footer className="footer">
+        {subscribeEnabled && (
+          <div className="footer__subscribe">
+            <SubscribeForm />
+          </div>
+        )}
         <div className="footer__inner">
           <span>Inkwell</span>
           <nav aria-label="Site">
-            <a href="/rss.xml">RSS feed</a>
             <Link to="/privacy">Privacy</Link>
             {PORTFOLIO_URL && <a href={PORTFOLIO_URL}>About the author</a>}
           </nav>

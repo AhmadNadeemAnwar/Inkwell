@@ -176,6 +176,9 @@ namespace Inkwell.Migrations.Postgres.Migrations
                     b.Property<int>("InsightfulCount")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("NotifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("PlainText")
                         .IsRequired()
                         .HasColumnType("text");
@@ -355,6 +358,45 @@ namespace Inkwell.Migrations.Postgres.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("images", (string)null);
+                });
+
+            modelBuilder.Entity("Inkwell.Domain.Entities.Subscriber", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ConfirmationSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<Guid?>("LastNotifiedPostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("subscribers", (string)null);
                 });
 
             modelBuilder.Entity("Inkwell.Domain.Entities.Tag", b =>

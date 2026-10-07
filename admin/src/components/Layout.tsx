@@ -6,6 +6,7 @@ const links = [
   { to: '/posts', label: 'Posts' },
   { to: '/comments', label: 'Comments' },
   { to: '/tags', label: 'Tags' },
+  { to: '/subscribers', label: 'Subscribers' },
   { to: '/site', label: 'Site' },
   { to: '/portfolio', label: 'Portfolio' },
   { to: '/profile', label: 'Profile' },

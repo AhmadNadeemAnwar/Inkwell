@@ -26,6 +26,8 @@ export interface Category {
 export interface Site {
   theme: string
   categories: Category[]
+  /** False until the site can send email; the subscribe form is hidden until then. */
+  subscribeEnabled: boolean
 }
 
 export interface PostSummary {

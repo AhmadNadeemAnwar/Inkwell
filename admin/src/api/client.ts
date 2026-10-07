@@ -1,5 +1,5 @@
 import type {
-  ActivityEntry, AdminComment, AdminPost, AdminTag, Category, Collection, Frontmatter, Paged, PortfolioEntry, PortfolioStatus,
+  ActivityEntry, AdminComment, AdminPost, AdminTag, Category, Collection, NotifyResult, Subscriber, SubscribersSummary, Frontmatter, Paged, PortfolioEntry, PortfolioStatus,
   PortfolioSummary, PostDraft, PostInput, PostRevision, PostRevisionDetail, PostStatus, PostTag, Profile, ProfileInput,
   Session, SiteSettings, Stats, StoredImage,
 } from './types'
@@ -128,6 +128,13 @@ export const api = {
 
   /** Every post as one object, for saving to a file. */
   exportPosts: () => request<{ postCount: number }>('GET', '/api/v1/admin/export'),
+
+  subscribersSummary: () => request<SubscribersSummary>('GET', '/api/v1/admin/subscribers/summary'),
+  subscribers: (pageNumber = 1) => request<Paged<Subscriber>>('GET', `/api/v1/admin/subscribers${query({ pageNumber, pageSize: 50 })}`),
+  removeSubscriber: (id: string) => request<void>('DELETE', `/api/v1/admin/subscribers/${id}`),
+  /** How many confirmed subscribers have not yet been told about this post. */
+  notifyWaiting: (postId: string) => request<{ waiting: number }>('GET', `/api/v1/admin/posts/${postId}/notify`),
+  notifyPost: (postId: string) => request<NotifyResult>('POST', `/api/v1/admin/posts/${postId}/notify`),
 
   settings: () => request<SiteSettings>('GET', '/api/v1/admin/settings'),
   updateSettings: (theme: string) => request<SiteSettings>('PUT', '/api/v1/admin/settings', { theme }),

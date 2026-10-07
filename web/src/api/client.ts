@@ -21,11 +21,18 @@ export class ApiError extends Error {
  * @param asVisitor Sends this browser's random visitor id. Only reactions and view counting need
  * it, so it is left off everything else and ordinary reads stay identical for every reader.
  */
-async function request<T>(method: string, path: string, asVisitor = false): Promise<T> {
+async function request<T>(method: string, path: string, asVisitor = false, body?: unknown): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: asVisitor ? { 'X-Visitor-Id': getVisitorId() } : undefined,
+    headers: {
+      ...(asVisitor ? { 'X-Visitor-Id': getVisitorId() } : {}),
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   })
+
+  // 202: accepted with nothing to say, as when a confirmation email has been sent.
+  if (response.status === 202) return undefined as T
 
   if (response.status === 204) return undefined as T
 
@@ -89,6 +96,11 @@ export const api = {
 
   /** Tells the API a reader has this post open. Counted at most once per browser per day. */
   recordView: (id: string) => request<void>('POST', `/api/v1/posts/${id}/view`, true),
+
+  /** Sends a confirmation email. The answer is the same whether or not the address was already subscribed. */
+  subscribe: (email: string) => request<void>('POST', '/api/v1/subscribers', false, { email }),
+  confirmSubscription: (token: string) => request<void>('POST', '/api/v1/subscribers/confirm', false, { token }),
+  unsubscribe: (token: string) => request<void>('POST', '/api/v1/subscribers/unsubscribe', false, { token }),
 
   profile: (handle: string) => request<Profile>('GET', `/api/v1/users/${encodeURIComponent(handle)}`),
 

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Inkwell.Api.Common;
 using Inkwell.Application.Site;
+using Inkwell.Application.Subscriptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,12 +13,18 @@ namespace Inkwell.Api.Controllers;
 public class SiteController : ControllerBase
 {
     private readonly ISiteService _site;
+    private readonly ISubscriptionService _subscriptions;
 
-    public SiteController(ISiteService site) => _site = site;
+    public SiteController(ISiteService site, ISubscriptionService subscriptions)
+    {
+        _site = site;
+        _subscriptions = subscriptions;
+    }
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<ActionResult<SiteDto>> Get(CancellationToken ct) => Ok(await _site.GetPublicAsync(ct));
+    public async Task<ActionResult<SiteDto>> Get(CancellationToken ct) =>
+        Ok(await _site.GetPublicAsync(ct) with { SubscribeEnabled = _subscriptions.IsAvailable });
 }
 
 /// <summary>The owner's controls for the same things. Every route needs an admin session.</summary>

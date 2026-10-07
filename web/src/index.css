@@ -538,3 +538,18 @@ input:focus, textarea:focus, select:focus {
 .related a { font-family: var(--font-read); font-size: 1.02rem; line-height: 1.35; color: var(--text); }
 .related a:hover { color: var(--accent); }
 .related span { font-size: 0.8rem; }
+
+/* ---- Subscribe by email -------------------------------------------------------------------- */
+
+.footer__subscribe { max-width: 68rem; margin: 0 auto; padding: 1.75rem 1.25rem 0.5rem; }
+.subscribe { max-width: 30rem; font-size: 0.95rem; color: var(--text); }
+.subscribe label { display: block; margin-bottom: 0.5rem; }
+.subscribe p { margin: 0.4rem 0 0; }
+.subscribe__row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.subscribe__row input { flex: 1; min-width: 12rem; }
+.subscribe__note { font-size: 0.82rem; color: var(--text-faint); }
+.subscribe__error { font-size: 0.85rem; color: var(--danger); }
+
+.notice { margin-top: 2rem; }
+.notice h1 { font-family: var(--font-read); font-size: 1.6rem; margin: 0 0 0.6rem; }
+.notice p { margin: 0 0 1.25rem; color: var(--text-muted); }

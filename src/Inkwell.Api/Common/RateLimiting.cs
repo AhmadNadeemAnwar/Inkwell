@@ -46,6 +46,10 @@ public static class RateLimiting
         if (HttpMethods.IsPost(method) && path.Equals("/api/v1/auth/register", StringComparison.OrdinalIgnoreCase))
             return Fixed($"register:{ip}", permits: 5, TimeSpan.FromHours(1));
 
+        // Each request here can send an email to an address the caller chose, so it is held far below ordinary writes.
+        if (HttpMethods.IsPost(method) && path.Equals("/api/v1/subscribers", StringComparison.OrdinalIgnoreCase))
+            return Fixed($"subscribe:{ip}", permits: 5, TimeSpan.FromHours(1));
+
         if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method))
         {
             // Search scans post bodies, so it is far more expensive than fetching a feed.

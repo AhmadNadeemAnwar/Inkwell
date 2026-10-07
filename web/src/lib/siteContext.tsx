@@ -7,9 +7,12 @@ import { applyTheme } from './theme'
 interface SiteState {
   /** Categories that have at least one published post, in the owner's order. Empty until loaded. */
   categories: Category[]
+  /** Whether readers can subscribe by email. False until the API says the site can send mail. */
+  subscribeEnabled: boolean
 }
 
-const SiteContext = createContext<SiteState>({ categories: [] })
+const EMPTY: SiteState = { categories: [], subscribeEnabled: false }
+const SiteContext = createContext<SiteState>(EMPTY)
 
 /**
  * Loads the two things that shape the whole site: its theme and its categories. Neither is needed
@@ -17,7 +20,7 @@ const SiteContext = createContext<SiteState>({ categories: [] })
  * no category tabs.
  */
 export function SiteProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<SiteState>({ categories: [] })
+  const [state, setState] = useState<SiteState>(EMPTY)
 
   useEffect(() => {
     let cancelled = false
@@ -25,7 +28,10 @@ export function SiteProvider({ children }: { children: ReactNode }) {
       .then((site) => {
         if (cancelled) return
         applyTheme(site.theme)
-        setState({ categories: site.categories.filter((category) => category.postCount > 0) })
+        setState({
+          categories: site.categories.filter((category) => category.postCount > 0),
+          subscribeEnabled: site.subscribeEnabled === true,
+        })
       })
       .catch(() => {})
     return () => { cancelled = true }

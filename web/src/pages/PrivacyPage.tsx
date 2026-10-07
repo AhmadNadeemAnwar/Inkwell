@@ -1,8 +1,9 @@
 import { useTitle } from '../hooks/useTitle'
 import { PORTFOLIO_URL } from '../lib/site'
+import { useSite } from '../lib/siteContext'
 
 /** Changed whenever what the site collects changes. */
-const LAST_UPDATED = '6 October 2026'
+const LAST_UPDATED = '7 October 2026'
 
 /**
  * What this site records about its readers. Kept to what the code actually does: if a feature that
@@ -10,6 +11,8 @@ const LAST_UPDATED = '6 October 2026'
  */
 export function PrivacyPage() {
   useTitle('Privacy')
+  // The email section describes something that only exists once the site can send mail.
+  const { subscribeEnabled } = useSite()
 
   return (
     <main className="main main--reading">
@@ -18,9 +21,9 @@ export function PrivacyPage() {
         <p className="faint">Last updated {LAST_UPDATED}</p>
 
         <p>
-          Inkwell is a personal site for reading articles. There are no reader accounts, nothing to sign up for,
-          no advertising, and nothing here is sold or shared for marketing. This page lists everything the site
-          records when you visit.
+          Inkwell is a personal site for reading articles. There are no reader accounts, no advertising, and nothing
+          here is sold or shared for marketing. This page lists everything the site records when you visit
+          {subscribeEnabled && <>, and what it keeps if you choose to subscribe by email</>}.
         </p>
 
         <h2>What your browser stores</h2>
@@ -53,16 +56,34 @@ export function PrivacyPage() {
           </li>
         </ul>
 
+        {subscribeEnabled && (
+          <>
+        <h2>If you subscribe by email</h2>
+        <p>
+          Subscribing is optional. If you enter your email address, the site stores that address and nothing else
+          about you: whether you have confirmed it, and when. It is used for one thing only, to send you a short
+          email with a link when a new article is published.
+        </p>
+        <ul>
+          <li>You are not subscribed until you click the link in the confirmation email, so nobody can sign you up without you.</li>
+          <li>Every email has an unsubscribe link. After you unsubscribe, your address is kept only so that it is never emailed again by mistake.</li>
+          <li>The emails are delivered by Brevo, a mail service, which receives your address in order to deliver them.</li>
+          <li>Your address is never shown on the site, sold, or passed to anyone else.</li>
+        </ul>
+          </>
+        )}
+
         <h2>What is not collected</h2>
         <p>
-          No names, no email addresses, no passwords and no payment details: there is nowhere on this site to enter
-          them. No advertising or social-media trackers are loaded.
+          No names, no passwords and no payment details: there is nowhere on this site to enter them
+          {!subscribeEnabled && <>, and no email addresses either</>}. No advertising or social-media trackers are loaded.
         </p>
 
         <h2>Who runs the machines</h2>
         <p>
           The pages are served by Cloudflare. The articles and pictures come from a server at Render, and are stored
-          in a database at Neon. These companies process requests on the site's behalf, under their own privacy terms.
+          in a database at Neon.{subscribeEnabled && <> Emails to subscribers are sent through Brevo.</>} These companies
+          process requests on the site's behalf, under their own privacy terms.
         </p>
 
         <h2>Links to other sites</h2>

@@ -1,3 +1,4 @@
+using Inkwell.Application.Site;
 using Inkwell.Domain.Common;
 
 namespace Inkwell.Application.Posts.Dtos;
@@ -30,7 +31,8 @@ public sealed record PostSummaryDto(
     string Status,
     DateTimeOffset? PublishedAt,
     AuthorSummaryDto Author,
-    IReadOnlyList<TagDto> Tags);
+    IReadOnlyList<TagDto> Tags,
+    CategoryDto? Category);
 
 /// <summary>Flags for a signed-in account, null for visitors. A visitor's reactions come from the reactions route instead.</summary>
 public sealed record ViewerStateDto(bool HasBookmarked, bool IsFollowingAuthor, bool IsAuthor);
@@ -52,6 +54,7 @@ public sealed record PostDetailDto(
     DateTimeOffset UpdatedAt,
     AuthorSummaryDto Author,
     IReadOnlyList<TagDto> Tags,
+    CategoryDto? Category,
     ViewerStateDto? Viewer);
 
 /// <summary>Draft, Published or Inactive.</summary>
@@ -62,14 +65,16 @@ public sealed record CreatePostRequest(
     string? Subtitle,
     string ContentJson,
     string? CoverImageUrl,
-    IReadOnlyList<string>? Tags);
+    IReadOnlyList<string>? Tags,
+    Guid? CategoryId = null);
 
 public sealed record UpdatePostRequest(
     string Title,
     string? Subtitle,
     string ContentJson,
     string? CoverImageUrl,
-    IReadOnlyList<string>? Tags);
+    IReadOnlyList<string>? Tags,
+    Guid? CategoryId = null);
 
 public sealed record PostRevisionDto(Guid Id, string Title, DateTimeOffset CreatedAt);
 
@@ -87,6 +92,7 @@ public sealed class PostQueryParameters
     public string? Q { get; set; }
     public string? Tag { get; set; }
     public string? Author { get; set; }
+    public string? Category { get; set; }
     public PostSort Sort { get; set; } = PostSort.Latest;
 
     public int PageNumber
@@ -106,6 +112,7 @@ public sealed class PostQueryParameters
         SearchTerm = string.IsNullOrWhiteSpace(Q) ? null : Q.Trim(),
         TagSlug = string.IsNullOrWhiteSpace(Tag) ? null : Tag.Trim().ToLowerInvariant(),
         AuthorHandle = string.IsNullOrWhiteSpace(Author) ? null : Author.Trim().ToLowerInvariant(),
+        CategorySlug = string.IsNullOrWhiteSpace(Category) ? null : Category.Trim().ToLowerInvariant(),
         Sort = Sort,
         PageNumber = PageNumber,
         PageSize = PageSize

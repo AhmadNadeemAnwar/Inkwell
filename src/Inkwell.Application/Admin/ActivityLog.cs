@@ -34,6 +34,10 @@ public static class Activity
     public const string SavedPortfolioEntry = "Saved portfolio entry";
     public const string DeletedPortfolioEntry = "Deleted portfolio entry";
     public const string ExportedPosts = "Exported all posts";
+    public const string ChangedTheme = "Changed the site theme";
+    public const string AddedCategory = "Added category";
+    public const string RenamedCategory = "Renamed category";
+    public const string DeletedCategory = "Deleted category";
 
     public static ActivityDto ToDto(this ActivityEntry entry) => new(entry.Id, entry.At, entry.Actor, entry.Action, entry.Subject);
 }

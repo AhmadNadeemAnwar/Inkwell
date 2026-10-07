@@ -9,6 +9,7 @@ A private site at **https://admin.ahmadnadeem.dev** for running Inkwell and edit
 | Comments | Every comment across the site: **remove** |
 | Topics | **Rename**, **merge** and **delete** tags |
 | Portfolio | Create, edit and delete your site's **blog**, **projects** and **updates** (Markdown, with a live preview) |
+| Site | The public site's **theme**, and the **categories** posts are shelved in |
 | Profile | Your name, photo, bio and website, as readers see them beside every post |
 | Activity | A history of what has been done in the portal, kept for 180 days |
 
@@ -152,6 +153,19 @@ editor or in the Posts list.
 | Draft | Only you. Not finished yet. |
 | Published | Everyone. The first publish fixes its address for good. |
 | Not active | Only you. Switched off; it keeps its address, so publishing again restores the same link. |
+
+**Theme:** under *Site*, choose how the public site looks to every reader: *Deep blue* or *Sea green*
+(white pages with a sea-green header and accents). Readers see the change the next time they open
+the site. Readers whose device is set to dark get a dark version of whichever theme you choose.
+
+**Categories:** broad shelves such as "Life and lessons". Add, rename and delete them under *Site*
+(up to 12), and choose one for a post under *Category* in the editor. The public home page shows a
+tab for each category that has a published post. Renaming keeps a category's address; deleting one
+keeps its posts, which simply have no category. Topics are separate and unchanged.
+
+**Post addresses:** a newly published post is read at `/read/its-title-k3x9p`. The short code at the
+end is added once, at first publish, and never changes, so retitling a post does not break its link.
+Posts published before this keep their plain address, and old `/p/...` links still open.
 
 **Earlier versions:** in the editor, *Earlier versions* (under Topics) lists saved copies of a post.
 A copy is kept when the title or the writing changes, at most once every ten minutes, and the newest

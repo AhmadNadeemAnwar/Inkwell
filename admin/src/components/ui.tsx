@@ -80,5 +80,5 @@ const publicSite = ((import.meta.env.VITE_PUBLIC_SITE as string | undefined) ?? 
 
 /** The public address of a post, or null while it has no slug (drafts never do). */
 export function publicPostUrl(slug: string | null): string | null {
-  return slug ? `${publicSite}/p/${encodeURIComponent(slug)}` : null
+  return slug ? `${publicSite}/read/${encodeURIComponent(slug)}` : null
 }

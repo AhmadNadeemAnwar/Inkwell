@@ -45,7 +45,7 @@ public class PostServiceTests : IDisposable
         var published = await _service.PublishAsync(draft.Id, author.Id);
 
         published.Status.Should().Be("Published");
-        published.Slug.Should().Be("hello-world");
+        published.Slug.Should().MatchRegex("^hello-world-[23456789a-hjkmnp-z]{5}$", "an address is the title followed by a short code");
     }
 
     [Fact]
@@ -127,13 +127,14 @@ public class PostServiceTests : IDisposable
     {
         var author = await _fixture.AddUserAsync();
         var draft = await _service.CreateDraftAsync(NewRequest("Original Name"), author.Id);
-        await _service.SetStatusAsync(draft.Id, "Published", author.Id);
+        var first = await _service.SetStatusAsync(draft.Id, "Published", author.Id);
         await _service.SetStatusAsync(draft.Id, "Inactive", author.Id);
         await _service.UpdateAsync(draft.Id, new UpdatePostRequest("A New Name Entirely", null, TestDatabase.Document("Body."), null, []), author.Id);
 
         var again = await _service.SetStatusAsync(draft.Id, "published", author.Id);
 
-        again.Slug.Should().Be("original-name");
+        first.Slug.Should().StartWith("original-name-");
+        again.Slug.Should().Be(first.Slug, "neither the new title nor a new code may change a published address");
     }
 
     [Theory]
@@ -176,6 +177,31 @@ public class PostServiceTests : IDisposable
         await create.Should().ThrowAsync<DomainException>();
         await update.Should().ThrowAsync<DomainException>();
         (await _fixture.Posts.GetByIdAsync(draft.Id))!.ContentJson.Should().NotContain("scriptSection");
+    }
+
+    [Fact]
+    public async Task Two_posts_with_the_same_title_get_different_addresses()
+    {
+        var author = await _fixture.AddUserAsync();
+        var first = await _service.CreateDraftAsync(NewRequest("Same Title"), author.Id);
+        var second = await _service.CreateDraftAsync(NewRequest("Same Title"), author.Id);
+
+        var a = await _service.PublishAsync(first.Id, author.Id);
+        var b = await _service.PublishAsync(second.Id, author.Id);
+
+        a.Slug.Should().StartWith("same-title-");
+        b.Slug.Should().StartWith("same-title-").And.NotBe(a.Slug);
+    }
+
+    [Fact]
+    public async Task A_title_with_no_letters_or_numbers_still_gets_an_address()
+    {
+        var author = await _fixture.AddUserAsync();
+        var draft = await _service.CreateDraftAsync(NewRequest("!!! ???"), author.Id);
+
+        var published = await _service.PublishAsync(draft.Id, author.Id);
+
+        published.Slug.Should().MatchRegex("^post-[23456789a-hjkmnp-z]{5}$");
     }
 
     [Fact]
@@ -262,10 +288,11 @@ public class PostServiceTests : IDisposable
         var reader = await _fixture.AddUserAsync("reader");
 
         var draft = await _service.CreateDraftAsync(NewRequest("Secret Notes"), author.Id);
-        await _service.PublishAsync(draft.Id, author.Id);
+        var slug = (await _service.PublishAsync(draft.Id, author.Id)).Slug!;
+        (await _service.GetBySlugAsync(slug, reader.Id)).Title.Should().Be("Secret Notes", "it is readable while published");
         await _service.UnpublishAsync(draft.Id, author.Id);
 
-        var act = () => _service.GetBySlugAsync("secret-notes", reader.Id);
+        var act = () => _service.GetBySlugAsync(slug, reader.Id);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
@@ -277,11 +304,11 @@ public class PostServiceTests : IDisposable
         var reader = await _fixture.AddUserAsync("reader");
 
         var draft = await _service.CreateDraftAsync(NewRequest("Counting Views"), author.Id);
-        await _service.PublishAsync(draft.Id, author.Id);
+        var slug = (await _service.PublishAsync(draft.Id, author.Id)).Slug!;
 
-        await _service.GetBySlugAsync("counting-views", author.Id);
-        await _service.GetBySlugAsync("counting-views", reader.Id);
-        await _service.GetBySlugAsync("counting-views", null);
+        await _service.GetBySlugAsync(slug, author.Id);
+        await _service.GetBySlugAsync(slug, reader.Id);
+        await _service.GetBySlugAsync(slug, null);
 
         // Views are reported by the reader's browser and de-duplicated; see ReactionServiceTests.
         (await _fixture.Posts.GetByIdAsync(draft.Id))!.ViewCount.Should().Be(0);

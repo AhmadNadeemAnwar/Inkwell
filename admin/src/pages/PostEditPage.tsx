@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, assetUrl } from '../api/client'
 import type { PostStatus } from '../api/types'
-import type { PostRevisionDetail } from '../api/types'
+import type { Category, PostRevisionDetail } from '../api/types'
 import { RevisionHistory } from '../components/RevisionHistory'
 import { SectionList } from '../components/SectionList'
 import { TagInput } from '../components/TagInput'
@@ -22,9 +22,11 @@ interface Draft {
   contentJson: string
   coverImageUrl: string
   tags: string[]
+  /** Empty for "no category". */
+  categoryId: string
 }
 
-const EMPTY_DRAFT: Draft = { title: '', subtitle: '', contentJson: serializeContent([newSection('text')]), coverImageUrl: '', tags: [] }
+const EMPTY_DRAFT: Draft = { title: '', subtitle: '', contentJson: serializeContent([newSection('text')]), coverImageUrl: '', tags: [], categoryId: '' }
 
 const STATUSES: PostStatus[] = ['Draft', 'Published', 'Inactive']
 
@@ -73,6 +75,8 @@ export function PostEditPage() {
   const [sections, setSections] = useState<Section[]>(() => [newSection('text')])
   const [coverImageUrl, setCoverImageUrl] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [categoryId, setCategoryId] = useState('')
+  const [categories, setCategories] = useState<Category[]>([])
   const [status, setStatus] = useState<PostStatus>('Draft')
   const [slug, setSlug] = useState<string | null>(null)
 
@@ -88,7 +92,7 @@ export function PostEditPage() {
 
   const contentJson = useMemo(() => serializeContent(sections), [sections])
   const problem = useMemo(() => findProblem(sections), [sections])
-  const snapshot = JSON.stringify({ title, subtitle, contentJson, coverImageUrl, tags } satisfies Draft)
+  const snapshot = JSON.stringify({ title, subtitle, contentJson, coverImageUrl, tags, categoryId } satisfies Draft)
   // What the server holds. Anything different on screen is unsaved.
   const [baseline, setBaseline] = useState(() => JSON.stringify(EMPTY_DRAFT))
   const dirty = snapshot !== baseline
@@ -103,7 +107,14 @@ export function PostEditPage() {
     setSections(parseContent(draft.contentJson))
     setCoverImageUrl(draft.coverImageUrl)
     setTags(draft.tags)
+    // A copy saved by an earlier version of this page has no category in it.
+    setCategoryId(draft.categoryId ?? '')
   }
+
+  // The list is small and rarely changes; if it cannot be loaded the post can still be written and saved.
+  useEffect(() => {
+    api.categories().then(setCategories).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!routeId) {
@@ -128,12 +139,14 @@ export function PostEditPage() {
           contentJson: serializeContent(opened),
           coverImageUrl: post.coverImageUrl ?? '',
           tags: post.tags.map((t) => t.name),
+          categoryId: post.category?.id ?? '',
         }
         setTitle(loaded.title)
         setSubtitle(loaded.subtitle)
         setSections(opened)
         setCoverImageUrl(loaded.coverImageUrl)
         setTags(loaded.tags)
+        setCategoryId(loaded.categoryId)
         setBaseline(JSON.stringify(loaded))
         setPostId(post.id)
         setStatus(post.status)
@@ -171,6 +184,7 @@ export function PostEditPage() {
         contentJson,
         coverImageUrl: coverImageUrl.trim() || null,
         tags,
+        categoryId: categoryId || null,
       }
       const post = postId ? await api.updatePost(postId, payload) : await api.createPost(payload)
 
@@ -195,7 +209,7 @@ export function PostEditPage() {
       savingNow.current = false
       setSaving(false)
     }
-  }, [title, subtitle, contentJson, coverImageUrl, tags, postId, snapshot, problem, navigate])
+  }, [title, subtitle, contentJson, coverImageUrl, tags, categoryId, postId, snapshot, problem, navigate])
 
   // A post nobody can see saves itself. A published post is live, so its changes wait for the Save button.
   useEffect(() => {
@@ -347,6 +361,18 @@ export function PostEditPage() {
             {coverImageUrl && <button type="button" className="btn btn--small btn--danger" onClick={() => setCoverImageUrl('')}>Remove</button>}
           </div>
           <p className="field__hint">Shown at the top of the post, above the first section.</p>
+        </div>
+        <div className="field">
+          <label htmlFor="category">Category</label>
+          <select id="category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">No category</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            {/* A post can sit in a category that has since been deleted from this list until it is next saved. */}
+            {categoryId && !categories.some((c) => c.id === categoryId) && <option value={categoryId}>(current category)</option>}
+          </select>
+          <p className="field__hint">
+            One broad shelf for the post. {categories.length === 0 ? <>None exist yet: add them under <Link to="/site">Site</Link>.</> : <>Manage the list under <Link to="/site">Site</Link>.</>}
+          </p>
         </div>
         <div className="field">
           <label>Topics (up to 5)</label>

@@ -89,6 +89,20 @@ public class PostgresTranslationTests : IDisposable
         AssertTranslatesAsync(() => new AdminRepository(_db).GetAllPostsAsync());
 
     [Fact]
+    public Task Category_listing_and_checks_translate() =>
+        AssertTranslatesAsync(async () =>
+        {
+            var site = new SiteRepository(_db);
+            await site.GetCategoriesAsync();
+            await site.CategoryNameExistsAsync("Life and lessons", Guid.NewGuid());
+            await site.NextCategorySortOrderAsync();
+        });
+
+    [Fact]
+    public Task Browsing_by_category_translates() =>
+        AssertTranslatesAsync(() => new PostRepository(_db).SearchAsync(new PostQuery { CategorySlug = "life-and-lessons" }));
+
+    [Fact]
     public Task Personal_feed_translates() =>
         AssertTranslatesAsync(() => new PostRepository(_db).GetPersonalFeedAsync(Guid.NewGuid(), 1, 20));
 

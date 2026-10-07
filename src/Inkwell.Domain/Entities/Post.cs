@@ -24,6 +24,10 @@ public class Post : BaseEntity
 
     public string? CoverImageUrl { get; private set; }
 
+    /// <summary>The one shelf this post sits on, if any. Topics (PostTags) are separate and many.</summary>
+    public Guid? CategoryId { get; private set; }
+    public Category? Category { get; private set; }
+
     /// <summary>Editor document (ProseMirror/TipTap JSON). The source of truth for the post body.</summary>
     public string ContentJson { get; private set; } = null!;
 
@@ -72,6 +76,14 @@ public class Post : BaseEntity
         PlainText = plainText ?? string.Empty;
         CoverImageUrl = string.IsNullOrWhiteSpace(coverImageUrl) ? null : coverImageUrl.Trim();
         ReadingTimeMinutes = CalculateReadingTime(PlainText);
+    }
+
+    public void SetCategory(Guid? categoryId)
+    {
+        if (CategoryId == categoryId) return;
+        CategoryId = categoryId;
+        Category = null;
+        Touch();
     }
 
     /// <param name="slug">Unique slug resolved by the application layer; ignored if this post already has one.</param>

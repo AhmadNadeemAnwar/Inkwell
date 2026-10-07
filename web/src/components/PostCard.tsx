@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import type { PostSummary } from '../api/types'
+import { postPath } from '../lib/site'
 import { Avatar, ErrorNote, Spinner, TagPill, formatDate } from './ui'
 
 export function PostCard({ post }: { post: PostSummary }) {
-  const href = `/p/${post.slug}`
+  const href = postPath(post.slug)
 
   return (
     <article className="post-card">
@@ -11,6 +12,7 @@ export function PostCard({ post }: { post: PostSummary }) {
         <Avatar author={post.author} />
         <Link to={`/@${post.author.handle}`}>{post.author.displayName}</Link>
         {post.publishedAt && <span className="faint">· {formatDate(post.publishedAt)}</span>}
+        {post.category && <Link className="post-card__category" to={`/?category=${encodeURIComponent(post.category.slug)}`}>{post.category.name}</Link>}
       </div>
 
       <Link to={href}>

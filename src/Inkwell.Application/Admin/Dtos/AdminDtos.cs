@@ -21,6 +21,7 @@ public sealed record ExportedPostDto(
     DateTimeOffset UpdatedAt,
     DateTimeOffset? PublishedAt,
     IReadOnlyList<string> Tags,
+    string? Category,
     string? CoverImageUrl,
     int Views,
     int Claps,
@@ -60,7 +61,8 @@ public sealed record AdminPostDto(
     int Claps,
     int Insightful,
     int Comments,
-    IReadOnlyList<string> Tags);
+    IReadOnlyList<string> Tags,
+    string? Category);
 
 public sealed record AdminCommentDto(
     Guid Id,

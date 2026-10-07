@@ -22,6 +22,8 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<PostRevision> PostRevisions => Set<PostRevision>();
     public DbSet<StoredImage> Images => Set<StoredImage>();
     public DbSet<ActivityEntry> ActivityEntries => Set<ActivityEntry>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

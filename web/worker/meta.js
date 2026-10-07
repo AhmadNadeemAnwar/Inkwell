@@ -35,9 +35,12 @@ export function escapeText(value) {
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
 }
 
-/** The post address in a URL path, or null if it is not shaped like one (so it is never sent to the API). */
+/**
+ * The post address in a URL path, or null if it is not shaped like one (so it is never sent to the
+ * API). Posts are read at /read/<post>; /p/<post> is where they used to live and still opens them.
+ */
 export function slugFromPath(pathname) {
-  const match = /^\/p\/([^/]+)\/?$/.exec(pathname)
+  const match = /^\/(?:read|p)\/([^/]+)\/?$/.exec(pathname)
   if (!match) return null
   let slug
   try {
@@ -102,7 +105,8 @@ export function describePost(post, { siteName, siteOrigin, apiBase }) {
     title: `${post.title} · ${siteName}`,
     heading: post.title,
     description,
-    url: `${siteOrigin}/p/${post.slug}`,
+    // Always the /read/ address, so a post shared through an old /p/ link is still treated as one page.
+    url: `${siteOrigin}/read/${post.slug}`,
     image: absoluteImage(post.coverImageUrl, apiBase),
     author: post.author?.displayName ?? null,
     publishedAt: post.publishedAt ?? null,
@@ -141,7 +145,7 @@ export function buildSitemap(posts, siteOrigin) {
   const entry = (loc, lastmod) => `<url><loc>${escapeText(loc)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>`
   const urls = [
     entry(`${siteOrigin}/`),
-    ...published(posts).map((post) => entry(`${siteOrigin}/p/${post.slug}`, isoDate(post.publishedAt))),
+    ...published(posts).map((post) => entry(`${siteOrigin}/read/${post.slug}`, isoDate(post.publishedAt))),
     entry(`${siteOrigin}/privacy`),
   ]
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>\n`
@@ -149,7 +153,7 @@ export function buildSitemap(posts, siteOrigin) {
 
 export function buildRss(posts, { siteName, siteOrigin, description }) {
   const items = published(posts).map((post) => {
-    const link = `${siteOrigin}/p/${post.slug}`
+    const link = `${siteOrigin}/read/${post.slug}`
     const date = new Date(post.publishedAt)
     return [
       '<item>',

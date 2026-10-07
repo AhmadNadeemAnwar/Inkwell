@@ -52,16 +52,22 @@ internal static class PostStatusChange
     }
 
     /// <summary>
-    /// Resolves the canonical slug for a title, appending a discriminator when the base is taken.
-    /// Only ever called on first publish; existing slugs are never recomputed.
+    /// The address for a post being published for the first time: its title, then a short code.
+    /// Only ever called on first publish; an existing address is never recomputed, which is why
+    /// posts published before codes were introduced keep their plain addresses.
     /// </summary>
     private static async Task<string> ResolveSlugAsync(string title, IPostRepository posts, CancellationToken ct)
     {
         var baseSlug = SlugGenerator.Generate(title);
         if (string.IsNullOrEmpty(baseSlug)) baseSlug = "post";
 
-        return await posts.SlugExistsAsync(baseSlug, ct)
-            ? SlugGenerator.WithSuffix(baseSlug)
-            : baseSlug;
+        // A clash needs the same title and the same code out of ~28 million, so one try is almost always enough.
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var candidate = SlugGenerator.WithCode(baseSlug);
+            if (!await posts.SlugExistsAsync(candidate, ct)) return candidate;
+        }
+
+        return SlugGenerator.WithSuffix(baseSlug);
     }
 }

@@ -1,6 +1,7 @@
 using Inkwell.Application.Auth.Dtos;
 using Inkwell.Application.Comments.Dtos;
 using Inkwell.Application.Posts.Dtos;
+using Inkwell.Application.Site;
 using Inkwell.Domain.Entities;
 
 namespace Inkwell.Application.Posts.Mapping;
@@ -12,6 +13,9 @@ public static class PostMappingExtensions
 
     public static CurrentUserDto ToCurrentUser(this User user) =>
         new(user.Id, user.Email, user.Handle, user.DisplayName, user.Bio, user.AvatarUrl, user.WebsiteUrl);
+
+    public static CategoryDto? ToDto(this Category? category) =>
+        category is null ? null : new CategoryDto(category.Id, category.Name, category.Slug);
 
     public static TagDto ToDto(this Tag tag) => new(tag.Id, tag.Name, tag.Slug, tag.PostCount);
 
@@ -29,7 +33,8 @@ public static class PostMappingExtensions
         post.Status.ToString(),
         post.PublishedAt,
         post.Author.ToAuthorSummary(),
-        post.PostTags.Where(pt => pt.Tag is not null).Select(pt => pt.Tag.ToDto()).ToList());
+        post.PostTags.Where(pt => pt.Tag is not null).Select(pt => pt.Tag.ToDto()).ToList(),
+        post.Category.ToDto());
 
     public static PostDetailDto ToDetail(this Post post, ViewerStateDto? viewer) => new(
         post.Id,
@@ -48,6 +53,7 @@ public static class PostMappingExtensions
         post.UpdatedAt,
         post.Author.ToAuthorSummary(),
         post.PostTags.Where(pt => pt.Tag is not null).Select(pt => pt.Tag.ToDto()).ToList(),
+        post.Category.ToDto(),
         viewer);
 
     public static PostRevisionDto ToDto(this PostRevision revision) =>

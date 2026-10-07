@@ -71,6 +71,39 @@ namespace Inkwell.Migrations.Postgres.Migrations
                     b.ToTable("bookmarks", (string)null);
                 });
 
+            modelBuilder.Entity("Inkwell.Domain.Entities.Category", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("categories", (string)null);
+                });
+
             modelBuilder.Entity("Inkwell.Domain.Entities.Comment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -118,6 +151,9 @@ namespace Inkwell.Migrations.Postgres.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("ClapCount")
@@ -173,6 +209,8 @@ namespace Inkwell.Migrations.Postgres.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -267,6 +305,22 @@ namespace Inkwell.Migrations.Postgres.Migrations
                     b.HasKey("PostId", "VisitorKey", "Kind");
 
                     b.ToTable("reactions", (string)null);
+                });
+
+            modelBuilder.Entity("Inkwell.Domain.Entities.SiteSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("site_settings", (string)null);
                 });
 
             modelBuilder.Entity("Inkwell.Domain.Entities.StoredImage", b =>
@@ -482,7 +536,14 @@ namespace Inkwell.Migrations.Postgres.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Inkwell.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Author");
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("Inkwell.Domain.Entities.PostRevision", b =>

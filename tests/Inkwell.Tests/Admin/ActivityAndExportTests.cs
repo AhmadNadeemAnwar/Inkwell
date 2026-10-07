@@ -171,7 +171,8 @@ public class ActivityAndExportTests : IDisposable
         export.Posts.Select(p => (p.Id, p.Status)).Should().BeEquivalentTo([(live, "Published"), (hidden, "Inactive"), (draft.Id, "Draft")]);
 
         var post = export.Posts.Single(p => p.Id == live);
-        post.Should().BeEquivalentTo(new { Title = "Live post", Subtitle = "A subtitle", Slug = "live-post", AuthorHandle = "ada", PlainText = "Body of Live post." });
+        post.Should().BeEquivalentTo(new { Title = "Live post", Subtitle = "A subtitle", AuthorHandle = "ada", PlainText = "Body of Live post." });
+        post.Slug.Should().StartWith("live-post-");
         post.Tags.Should().Equal("news");
         post.ContentJson.Should().Be(TestDatabase.Document("Body of Live post."));
         post.PublishedAt.Should().NotBeNull();

@@ -422,3 +422,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-vi
 .history__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; font-size: 0.9rem; }
 .history__list li { display: flex; align-items: center; gap: 0.75rem; }
 .history__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Site: theme and categories --------------------------------------------------------------------- */
+
+.themes { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.75rem; margin-top: 0.9rem; }
+.theme { display: grid; gap: 0.35rem; text-align: left; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 0.9rem 1rem; cursor: pointer; }
+.theme:hover:not(:disabled):not(.theme--active) { border-color: var(--accent); }
+.theme:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme:disabled { cursor: progress; opacity: 0.7; }
+.theme--active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); cursor: default; }
+.theme__swatches { display: flex; gap: 0.3rem; }
+.theme__swatches span { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--border-strong); }
+.theme__name { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+.theme__note { font-size: 0.85rem; color: var(--text-muted); }
+
+.category-add { margin-top: 1rem; }
+.category-add input { max-width: 26rem; }

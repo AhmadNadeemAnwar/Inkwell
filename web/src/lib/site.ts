@@ -22,3 +22,8 @@ export function pageTitle(page?: string | null): string {
   const clean = (page ?? '').replace(/\s+/g, ' ').trim()
   return clean === '' ? SITE_NAME : `${clean} · ${SITE_NAME}`
 }
+
+/** Where a post is read. Posts used to live under /p/; those addresses still open the same post. */
+export function postPath(slug: string | null): string {
+  return `/read/${encodeURIComponent(slug ?? '')}`
+}

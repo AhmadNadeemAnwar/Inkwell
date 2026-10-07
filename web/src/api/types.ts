@@ -15,6 +15,19 @@ export interface Tag {
   postCount: number
 }
 
+/** A shelf for posts. `postCount` is how many published posts are on it. */
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  postCount: number
+}
+
+export interface Site {
+  theme: string
+  categories: Category[]
+}
+
 export interface PostSummary {
   id: string
   slug: string | null
@@ -30,6 +43,7 @@ export interface PostSummary {
   publishedAt: string | null
   author: Author
   tags: Tag[]
+  category: { id: string; name: string; slug: string } | null
 }
 
 export interface PostDetail extends Omit<PostSummary, 'excerpt'> {

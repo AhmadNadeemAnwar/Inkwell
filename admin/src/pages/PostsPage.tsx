@@ -141,7 +141,9 @@ export function PostsPage() {
                     <tr key={post.id} className={busyId === post.id ? 'is-busy' : undefined}>
                       <td>
                         <div className="cell-title">{url && post.status === 'Published' ? <a href={url} target="_blank" rel="noopener noreferrer">{post.title}</a> : post.title}</div>
-                        {post.tags.length > 0 && <div className="cell-sub">{post.tags.join(' · ')}</div>}
+                        {(post.category || post.tags.length > 0) && (
+                          <div className="cell-sub">{[post.category, ...post.tags].filter(Boolean).join(' · ')}</div>
+                        )}
                       </td>
                       <td>@{post.authorHandle}</td>
                       <td>

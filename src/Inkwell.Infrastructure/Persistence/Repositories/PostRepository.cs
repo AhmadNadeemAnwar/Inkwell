@@ -18,12 +18,14 @@ public class PostRepository : IPostRepository
     public async Task<Post?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         await _db.Posts
             .Include(p => p.Author)
+            .Include(p => p.Category)
             .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
 
     public async Task<Post?> GetBySlugAsync(string slug, CancellationToken ct = default) =>
         await _db.Posts
             .Include(p => p.Author)
+            .Include(p => p.Category)
             .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
             .FirstOrDefaultAsync(p => p.Slug == slug, ct);
 
@@ -62,6 +64,11 @@ public class PostRepository : IPostRepository
             posts = posts.Where(p => p.Author.Handle == query.AuthorHandle);
         }
 
+        if (!string.IsNullOrWhiteSpace(query.CategorySlug))
+        {
+            posts = posts.Where(p => p.Category != null && p.Category.Slug == query.CategorySlug);
+        }
+
         posts = ApplySort(posts, query.Sort, query.SearchTerm);
 
         return await PageAsync(posts, query.PageNumber, query.PageSize, ct);
@@ -97,6 +104,7 @@ public class PostRepository : IPostRepository
         var query = _db.Bookmarks.AsNoTracking()
             .Where(b => b.UserId == userId)
             .Include(b => b.Post).ThenInclude(p => p.Author)
+            .Include(b => b.Post).ThenInclude(p => p.Category)
             .Include(b => b.Post).ThenInclude(p => p.PostTags).ThenInclude(pt => pt.Tag)
             .OrderByDescending(b => b.CreatedAt);
 
@@ -171,6 +179,7 @@ public class PostRepository : IPostRepository
     private IQueryable<Post> BaseQuery() =>
         _db.Posts.AsNoTracking()
             .Include(p => p.Author)
+            .Include(p => p.Category)
             .Include(p => p.PostTags).ThenInclude(pt => pt.Tag);
 
     private IQueryable<Post> PublishedPosts() =>

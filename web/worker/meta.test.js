@@ -57,8 +57,16 @@ describe('escapeText', () => {
 
 describe('slugFromPath', () => {
   it('reads the post address from a post page', () => {
+    expect(slugFromPath('/read/today-for-tomorrow-k3x9p')).toBe('today-for-tomorrow-k3x9p')
+    expect(slugFromPath('/read/what-i-learned/')).toBe('what-i-learned')
+  })
+
+  it('still reads it from the older /p/ address', () => {
     expect(slugFromPath('/p/what-i-learned')).toBe('what-i-learned')
-    expect(slugFromPath('/p/what-i-learned/')).toBe('what-i-learned')
+  })
+
+  it.each(['/reading/a-post', '/read', '/read/', '/read/a/b', '/x/a-post', '/read/..%2Fadmin'])('refuses %s', (path) => {
+    expect(slugFromPath(path)).toBeNull()
   })
 
   it.each(['/', '/p/', '/p/a/b', '/search', '/p/Has%20Space', '/p/..%2Fadmin', '/p/%E0%A4%A', '/p/UPPER', '/p/a?b', `/p/${'x'.repeat(121)}`])(
@@ -135,13 +143,18 @@ describe('describePost', () => {
     expect(describePost(post({ contentJson: '{}' }), SITE).description).toBe('An article on Inkwell.')
   })
 
+  it('gives the /read/ address as the one true address of a post', () => {
+    expect(describePost(post(), SITE).url).toBe('https://inkwell.example/read/a-post')
+    expect(headTags(describePost(post(), SITE), 'Inkwell')).toContain('<link rel="canonical" href="https://inkwell.example/read/a-post">')
+  })
+
   it('builds the address, title and picture', () => {
     const meta = describePost(post({ coverImageUrl: IMAGE }), SITE)
 
     expect(meta).toMatchObject({
       title: 'A post · Inkwell',
       heading: 'A post',
-      url: 'https://inkwell.example/p/a-post',
+      url: 'https://inkwell.example/read/a-post',
       image: `https://api.example${IMAGE}`,
       author: 'Ahmad Nadeem',
     })
@@ -152,7 +165,7 @@ describe('headTags', () => {
   it('includes what LinkedIn, WhatsApp and X look for', () => {
     const tags = headTags(describePost(post({ coverImageUrl: IMAGE }), SITE), 'Inkwell')
 
-    expect(tags).toContain('<link rel="canonical" href="https://inkwell.example/p/a-post">')
+    expect(tags).toContain('<link rel="canonical" href="https://inkwell.example/read/a-post">')
     expect(tags).toContain('<meta property="og:title" content="A post">')
     expect(tags).toContain('<meta property="og:type" content="article">')
     expect(tags).toContain(`<meta property="og:image" content="https://api.example${IMAGE}">`)
@@ -183,8 +196,8 @@ describe('buildSitemap', () => {
 
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true)
     expect(xml).toContain('<loc>https://inkwell.example/</loc>')
-    expect(xml).toContain('<url><loc>https://inkwell.example/p/a-post</loc><lastmod>2026-10-01T09:30:00.000Z</lastmod></url>')
-    expect(xml).toContain('<loc>https://inkwell.example/p/another-post</loc>')
+    expect(xml).toContain('<url><loc>https://inkwell.example/read/a-post</loc><lastmod>2026-10-01T09:30:00.000Z</lastmod></url>')
+    expect(xml).toContain('<loc>https://inkwell.example/read/another-post</loc>')
     expect(xml).toContain('<loc>https://inkwell.example/privacy</loc>')
   })
 
@@ -207,8 +220,8 @@ describe('buildRss', () => {
 
     expect(xml).toContain('<title>Inkwell</title>')
     expect(xml).toContain('<atom:link href="https://inkwell.example/rss.xml" rel="self" type="application/rss+xml"/>')
-    expect(xml).toContain('<item><title>A post</title><link>https://inkwell.example/p/a-post</link>')
-    expect(xml).toContain('<guid isPermaLink="true">https://inkwell.example/p/a-post</guid>')
+    expect(xml).toContain('<item><title>A post</title><link>https://inkwell.example/read/a-post</link>')
+    expect(xml).toContain('<guid isPermaLink="true">https://inkwell.example/read/a-post</guid>')
     expect(xml).toContain('<pubDate>Thu, 01 Oct 2026 09:30:00 GMT</pubDate>')
     expect(xml).toContain('<description>The subtitle.</description>')
     expect(xml).toContain('<category>Engineering</category>')

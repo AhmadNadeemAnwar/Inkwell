@@ -1,21 +1,45 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { PostSort } from '../api/types'
 import { PagedPostList } from '../components/PostCard'
 import { TagPill } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { usePagedPosts } from '../hooks/usePagedPosts'
+import { useSite } from '../lib/siteContext'
 
 const FEEDS: PostSort[] = ['Latest', 'Trending', 'Popular']
 
 export function HomePage() {
+  const { categories } = useSite()
   const [feed, setFeed] = useState<PostSort>('Latest')
 
-  const list = usePagedPosts({ sort: feed }, [feed], null)
+  // The chosen category lives in the address, so a category can be linked to and the Back button works.
+  const [params, setParams] = useSearchParams()
+  const category = (params.get('category') ?? '').trim().toLowerCase()
+  const current = categories.find((c) => c.slug === category)
+
+  const list = usePagedPosts({ sort: feed, category: category || undefined }, [feed, category], current?.name ?? null)
   const tags = useAsync(() => api.popularTags(12), [])
+
+  const choose = (slug: string) => setParams(slug ? { category: slug } : {})
 
   return (
     <main className="main">
+      {categories.length > 0 && (
+        <nav className="categories" aria-label="Categories">
+          <button className={`category${category === '' ? ' category--active' : ''}`} aria-current={category === '' ? 'page' : undefined} onClick={() => choose('')}>
+            All
+          </button>
+          {categories.map((c) => (
+            <button key={c.id} className={`category${category === c.slug ? ' category--active' : ''}`} aria-current={category === c.slug ? 'page' : undefined}
+              onClick={() => choose(c.slug)}>
+              {c.name}
+            </button>
+          ))}
+        </nav>
+      )}
+
       <div className="layout-split">
         <div>
           <div className="tabs" role="tablist">
@@ -32,7 +56,14 @@ export function HomePage() {
             ))}
           </div>
 
-          <PagedPostList list={list} emptyLabel={feed === 'Trending' ? 'Nothing new in the last few days.' : 'Nothing published yet. Check back soon.'} />
+          <PagedPostList
+            list={list}
+            emptyLabel={
+              feed === 'Trending' ? 'Nothing new in the last few days.'
+                : category ? 'Nothing in this category yet.'
+                : 'Nothing published yet. Check back soon.'
+            }
+          />
         </div>
 
         {tags.data && tags.data.length > 0 && (

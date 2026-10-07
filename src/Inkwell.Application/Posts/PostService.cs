@@ -27,14 +27,17 @@ public sealed class PostService : IPostService
     private readonly IEngagementRepository _engagement;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _time;
+    private readonly ISiteRepository? _site;
 
     public PostService(
         IPostRepository posts,
         ITagRepository tags,
         IEngagementRepository engagement,
         IUnitOfWork unitOfWork,
-        TimeProvider? time = null)
+        TimeProvider? time = null,
+        ISiteRepository? site = null)
     {
+        _site = site;
         _posts = posts;
         _tags = tags;
         _engagement = engagement;
@@ -47,6 +50,8 @@ public sealed class PostService : IPostService
         PostContent.Validate(request.ContentJson);
         var plainText = ProseMirrorText.Extract(request.ContentJson);
         var post = new Post(authorId, request.Title, request.Subtitle, request.ContentJson, plainText, request.CoverImageUrl);
+
+        await ApplyCategoryAsync(post, request.CategoryId, ct);
 
         await _posts.AddAsync(post, ct);
         await SyncTagsAsync(post, request.Tags, ct);
@@ -75,6 +80,7 @@ public sealed class PostService : IPostService
 
         var plainText = ProseMirrorText.Extract(request.ContentJson);
         post.UpdateDraft(request.Title, request.Subtitle, request.ContentJson, plainText, request.CoverImageUrl);
+        await ApplyCategoryAsync(post, request.CategoryId, ct);
 
         await SyncTagsAsync(post, request.Tags, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -185,6 +191,18 @@ public sealed class PostService : IPostService
 
         var revision = await _posts.GetRevisionAsync(postId, revisionId, ct) ?? throw new NotFoundException(nameof(PostRevision), revisionId);
         return new PostRevisionDetailDto(revision.Id, revision.Title, revision.ContentJson, revision.CreatedAt);
+    }
+
+    /// <summary>Puts the post on a shelf, or takes it off. A category that does not exist is refused, not ignored.</summary>
+    private async Task ApplyCategoryAsync(Post post, Guid? categoryId, CancellationToken ct)
+    {
+        if (categoryId is { } id && id != post.CategoryId)
+        {
+            if (_site is null || await _site.GetCategoryAsync(id, ct) is null)
+                throw new DomainException("That category no longer exists. Choose another, or none.");
+        }
+
+        post.SetCategory(categoryId);
     }
 
     /// <summary>

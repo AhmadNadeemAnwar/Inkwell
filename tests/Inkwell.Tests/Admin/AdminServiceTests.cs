@@ -219,7 +219,7 @@ public class AdminServiceTests : IDisposable
 
         await _admin.SetPostStatusAsync(draft, "Published", "owner@example.com");
 
-        (await _fixture.Posts.GetByIdAsync(draft))!.Slug.Should().Be("first-time-out");
+        (await _fixture.Posts.GetByIdAsync(draft))!.Slug.Should().StartWith("first-time-out-");
     }
 
     [Theory]

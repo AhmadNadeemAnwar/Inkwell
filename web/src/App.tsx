@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { EmptyState } from './components/ui'
 import { useTitle } from './hooks/useTitle'
+import { SiteProvider } from './lib/siteContext'
 import { HomePage } from './pages/HomePage'
 import { PostPage } from './pages/PostPage'
 import { PrivacyPage } from './pages/PrivacyPage'
@@ -18,11 +19,14 @@ function NotFound() {
 export default function App() {
   return (
     <BrowserRouter>
+      <SiteProvider>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/tag/:slug" element={<TagPage />} />
+          <Route path="/read/:slug" element={<PostPage />} />
+          {/* Where posts lived before /read/. Kept so links already shared keep opening. */}
           <Route path="/p/:slug" element={<PostPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           {/* React Router cannot match a partial segment like "/@:handle", so profiles take the
@@ -32,6 +36,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
+      </SiteProvider>
     </BrowserRouter>
   )
 }

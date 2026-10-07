@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api/client'
-import type { ReactionKind, ReactionState } from '../api/types'
 import { CopyLinkButton } from '../components/CopyLinkButton'
-import { PostCard } from '../components/PostCard'
+import { Reactions } from '../components/Reactions'
 import { RichText } from '../components/RichText'
-import { Avatar, EmptyState, ErrorNote, Spinner, TagPill, formatDate } from '../components/ui'
+import { Avatar, EmptyState, Spinner, TagPill, formatDate } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useTitle } from '../hooks/useTitle'
 import { safeImageSrc } from '../lib/safeUrl'
+import { postPath } from '../lib/site'
 
 export function PostPage() {
   const { slug = '' } = useParams()
@@ -17,21 +17,10 @@ export function PostPage() {
   const post = loaded.data
   useTitle(post?.title ?? null)
 
-  // Totals come with the post; which ones this browser gave is asked for separately, so the post
-  // itself is the same for every reader.
-  const [reactions, setReactions] = useState<ReactionState | null>(null)
-  const [reacting, setReacting] = useState<ReactionKind | null>(null)
-  const [reactionError, setReactionError] = useState<string | null>(null)
-
   const postId = post?.id
   useEffect(() => {
-    if (!postId) return
-    let cancelled = false
-    setReactions(null)
-    api.reactions(postId).then((state) => { if (!cancelled) setReactions(state) }).catch(() => { /* The totals from the post are shown instead. */ })
     // Not awaited and never shown: counting a reader must not get in the way of reading.
-    api.recordView(postId).catch(() => {})
-    return () => { cancelled = true }
+    if (postId) api.recordView(postId).catch(() => {})
   }, [postId])
 
   const related = useAsync(() => (postId ? api.related(postId) : Promise.resolve([])), [postId])
@@ -48,26 +37,17 @@ export function PostPage() {
     )
   }
 
-  async function react(kind: ReactionKind) {
-    // One at a time: a second click before the first answer would otherwise undo it at once.
-    if (reacting || !postId) return
-    setReacting(kind)
-    setReactionError(null)
-    try {
-      setReactions(await api.toggleReaction(postId, kind))
-    } catch (err) {
-      setReactionError(err instanceof Error ? err.message : 'Your reaction could not be saved.')
-    } finally {
-      setReacting(null)
-    }
-  }
-
-  const link = `${window.location.origin}/p/${post.slug}`
+  const link = `${window.location.origin}${postPath(post.slug)}`
   const cover = safeImageSrc(post.coverImageUrl)
 
+  const hasRelated = Boolean(related.data && related.data.length > 0)
+
   return (
-    <main className="main main--reading">
-      <article>
+    <main className="main main--post">
+      <article className="read__article">
+        {post.category && (
+          <Link className="article__category" to={`/?category=${encodeURIComponent(post.category.slug)}`}>{post.category.name}</Link>
+        )}
         <div className="article__title-row">
           <h1 className="article__title">{post.title}</h1>
           <CopyLinkButton url={link} compact />
@@ -95,27 +75,36 @@ export function PostPage() {
         )}
 
         <div className="actionbar">
-          <button className={`btn${reactions?.clapped ? ' btn--active' : ''}`} onClick={() => react('clap')} disabled={reacting !== null}
-            aria-pressed={reactions?.clapped ?? false} title={reactions?.clapped ? 'Take back your clap' : 'Clap for this post'}>
-            <span aria-hidden="true">👏</span> Clap <span className="reaction__count">{reactions?.clapCount ?? post.clapCount}</span>
-          </button>
-          <button className={`btn${reactions?.markedInsightful ? ' btn--active' : ''}`} onClick={() => react('insightful')} disabled={reacting !== null}
-            aria-pressed={reactions?.markedInsightful ?? false} title={reactions?.markedInsightful ? 'Take back your mark' : 'Mark this post as insightful'}>
-            <span aria-hidden="true">💡</span> Insightful <span className="reaction__count">{reactions?.insightfulCount ?? post.insightfulCount}</span>
-          </button>
+          <Reactions postId={post.id} clapCount={post.clapCount} insightfulCount={post.insightfulCount} />
           <span className="actionbar__spacer" />
           <CopyLinkButton url={link} />
         </div>
       </article>
 
-      {reactionError && <ErrorNote message={reactionError} />}
-
-      {related.data && related.data.length > 0 && (
-        <section style={{ marginTop: '3rem' }}>
-          <h2 className="sidebar__title">More on this topic</h2>
-          {related.data.map((item) => <PostCard key={item.id} post={item} />)}
+      {/* Beside the article on a wide screen, where there would otherwise be empty margin; below it on a narrow one. */}
+      <aside className="read__aside" aria-label="About this article">
+        <section className="author-card">
+          <Avatar author={post.author} large />
+          <div>
+            <Link className="author-card__name" to={`/@${post.author.handle}`}>{post.author.displayName}</Link>
+            {post.author.bio && <p className="author-card__bio">{post.author.bio}</p>}
+          </div>
         </section>
-      )}
+
+        {hasRelated && (
+          <section>
+            <h2 className="sidebar__title">More on this topic</h2>
+            <ul className="related">
+              {related.data!.map((item) => (
+                <li key={item.id}>
+                  <Link to={postPath(item.slug)}>{item.title}</Link>
+                  <span className="faint">{item.readingTimeMinutes} min read</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </aside>
     </main>
   )
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Inkwell.Application.Common;
@@ -44,8 +45,23 @@ public static class SlugGenerator
         return slug;
     }
 
+    public const int CodeLength = 5;
+
+    /// <summary>Letters and digits that cannot be mistaken for one another when read aloud or copied by hand (no 0/o, 1/l/i).</summary>
+    private const string CodeAlphabet = "23456789abcdefghjkmnpqrstuvwxyz";
+
     /// <summary>
-    /// Appends a short random discriminator. Used when the base slug is already taken, which keeps
+    /// Appends a short random code, as in "today-for-tomorrow-k3x9p". Every post address ends in
+    /// one, so two posts with the same title never collide and an address cannot be guessed from a title.
+    /// </summary>
+    public static string WithCode(string slug)
+    {
+        var code = RandomNumberGenerator.GetString(CodeAlphabet, CodeLength);
+        return string.IsNullOrEmpty(slug) ? code : $"{slug}-{code}";
+    }
+
+    /// <summary>
+    /// Appends a longer random discriminator. The fallback if short codes keep colliding, which keeps
     /// slug allocation a single insert attempt instead of a count-and-retry loop.
     /// </summary>
     public static string WithSuffix(string slug)

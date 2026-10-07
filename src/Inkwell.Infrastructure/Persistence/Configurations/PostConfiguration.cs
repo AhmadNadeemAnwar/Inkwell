@@ -28,6 +28,12 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
         // Covers the author's own dashboard listing.
         builder.HasIndex(p => new { p.AuthorId, p.Status, p.UpdatedAt });
 
+        // Deleting a category leaves its posts in place, simply without one.
+        builder.HasOne(p => p.Category)
+            .WithMany()
+            .HasForeignKey(p => p.CategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasMany(p => p.Comments)
             .WithOne(c => c.Post)
             .HasForeignKey(c => c.PostId)

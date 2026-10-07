@@ -92,7 +92,8 @@ public sealed class AdminService : IAdminService
         return page.Map(p => new AdminPostDto(
             p.Id, p.Title, p.Slug, p.Status.ToString(), p.Author.Handle, p.Author.DisplayName,
             p.PublishedAt, p.UpdatedAt, p.ViewCount, p.ClapCount, p.InsightfulCount, p.CommentCount,
-            p.PostTags.Select(pt => pt.Tag.Name).OrderBy(n => n).ToList()));
+            p.PostTags.Select(pt => pt.Tag.Name).OrderBy(n => n).ToList(),
+            p.Category?.Name));
     }
 
     public Task UnpublishPostAsync(Guid postId, string admin, CancellationToken ct = default) =>
@@ -120,6 +121,7 @@ public sealed class AdminService : IAdminService
             p.Id, p.Title, p.Subtitle, p.Slug, p.Status.ToString(), p.Author.Handle, p.Author.DisplayName,
             p.CreatedAt, p.UpdatedAt, p.PublishedAt,
             p.PostTags.Where(pt => pt.Tag is not null).Select(pt => pt.Tag.Name).OrderBy(n => n).ToList(),
+            p.Category?.Name,
             p.CoverImageUrl, p.ViewCount, p.ClapCount, p.InsightfulCount, p.PlainText, p.ContentJson)).ToList();
 
         await _activity.RecordAsync(admin, Activity.ExportedPosts, $"{exported.Count} posts", ct);

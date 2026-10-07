@@ -1,5 +1,5 @@
 import { getVisitorId } from '../lib/visitor'
-import type { Paged, PostDetail, PostSort, PostSummary, Profile, ReactionKind, ReactionState, Tag } from './types'
+import type { Paged, PostDetail, PostSort, PostSummary, Profile, ReactionKind, ReactionState, Site, Tag } from './types'
 
 // Empty in development, where Vite proxies /api to the local API. In production the SPA and the
 // API live on different origins, so the build bakes in the API's absolute URL.
@@ -63,12 +63,16 @@ export interface PostFilters {
   q?: string
   tag?: string
   author?: string
+  category?: string
   sort?: PostSort
   pageNumber?: number
   pageSize?: number
 }
 
 export const api = {
+  /** The theme the owner chose and the categories posts are shelved in. */
+  site: () => request<Site>('GET', '/api/v1/site'),
+
   posts: (filters: PostFilters = {}) =>
     request<Paged<PostSummary>>('GET', `/api/v1/posts${query({ ...filters })}`),
 

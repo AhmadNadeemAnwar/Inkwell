@@ -1,7 +1,7 @@
 import type {
-  ActivityEntry, AdminComment, AdminPost, AdminTag, Collection, Frontmatter, Paged, PortfolioEntry, PortfolioStatus,
+  ActivityEntry, AdminComment, AdminPost, AdminTag, Category, Collection, Frontmatter, Paged, PortfolioEntry, PortfolioStatus,
   PortfolioSummary, PostDraft, PostInput, PostRevision, PostRevisionDetail, PostStatus, PostTag, Profile, ProfileInput,
-  Session, Stats, StoredImage,
+  Session, SiteSettings, Stats, StoredImage,
 } from './types'
 
 // Empty in development (Vite proxies /api); the production build bakes in the API's absolute URL.
@@ -128,6 +128,14 @@ export const api = {
 
   /** Every post as one object, for saving to a file. */
   exportPosts: () => request<{ postCount: number }>('GET', '/api/v1/admin/export'),
+
+  settings: () => request<SiteSettings>('GET', '/api/v1/admin/settings'),
+  updateSettings: (theme: string) => request<SiteSettings>('PUT', '/api/v1/admin/settings', { theme }),
+
+  categories: () => request<Category[]>('GET', '/api/v1/admin/categories'),
+  createCategory: (name: string) => request<Category>('POST', '/api/v1/admin/categories', { name }),
+  renameCategory: (id: string, name: string) => request<Category>('PUT', `/api/v1/admin/categories/${id}`, { name }),
+  deleteCategory: (id: string) => request<void>('DELETE', `/api/v1/admin/categories/${id}`),
 
   profile: () => request<Profile>('GET', '/api/v1/auth/me'),
   updateProfile: (body: ProfileInput) => request<Profile>('PUT', '/api/v1/users/me', body),

@@ -47,7 +47,8 @@
   --radius: 8px;
   --shadow: 0 1px 2px rgba(31, 36, 46, 0.05), 0 6px 16px rgba(31, 36, 46, 0.06);
 
-  --measure: 42rem;
+  /* Wide enough to use a desktop screen, with the text sized up so lines stay comfortable to read. */
+  --measure: 50rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -76,6 +77,58 @@
     --accent-soft: #17293c;
     --accent-chrome: #6fa8e0;
     --danger: #e58270;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/*
+ * "Sea green": white pages with a deep sea-green frame and accents. Chosen by the owner in the
+ * admin portal and applied as data-theme on <html>. Every pair of colours used for text meets
+ * WCAG AA (4.5:1) against the surface it sits on.
+ */
+:root[data-theme='seagreen'] {
+  --bg: #ffffff;
+  --bg-subtle: #f1f7f4;
+  --bg-raised: #ffffff;
+
+  --border: #dfe9e4;
+  --border-strong: #c4d5cc;
+
+  --chrome: #17694a;
+  --chrome-raised: #1e7a56;
+  --chrome-text: #f4fbf8;
+  --chrome-muted: #c9e8dc;
+  --chrome-border: #2a8a65;
+
+  --accent: #1a7350;
+  --accent-hover: #115c3e;
+  --accent-soft: #e3f3ec;
+  --accent-chrome: #c2f2df;
+
+  --shadow: 0 1px 2px rgba(23, 105, 74, 0.06), 0 6px 16px rgba(23, 105, 74, 0.07);
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Readers whose device asks for dark pages keep them; the green carries over as the accent. */
+  :root[data-theme='seagreen'] {
+    --bg: #17181a;
+    --bg-subtle: #1e2321;
+    --bg-raised: #252a28;
+
+    --border: #2e3532;
+    --border-strong: #3f4945;
+
+    --chrome: #12382b;
+    --chrome-raised: #184838;
+    --chrome-text: #eef6f2;
+    --chrome-muted: #a9cbbd;
+    --chrome-border: #1f5a45;
+
+    --accent: #5cc79b;
+    --accent-hover: #7ad6ae;
+    --accent-soft: #173328;
+    --accent-chrome: #7fd9b3;
+
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.35);
   }
 }
@@ -271,7 +324,7 @@ input:focus, textarea:focus, select:focus {
 .article__byline { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
 .article__cover { width: 100%; border-radius: var(--radius); margin-bottom: 2rem; }
 
-.prose { font-family: var(--font-read); font-size: 1.16rem; line-height: 1.75; }
+.prose { font-family: var(--font-read); font-size: 1.22rem; line-height: 1.75; }
 .prose p { margin: 0 0 1.4em; }
 .prose h2 { font-size: 1.6rem; line-height: 1.25; margin: 2em 0 0.6em; letter-spacing: -0.01em; }
 .prose h3 { font-size: 1.3rem; margin: 1.8em 0 0.5em; }
@@ -398,3 +451,90 @@ input:focus, textarea:focus, select:focus {
 
 .legal h2 { font-size: 1.25rem; }
 .legal li { margin-bottom: 0.8em; }
+
+/* ---- Categories ---------------------------------------------------------------------------- */
+
+.categories { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
+.category { font: inherit; font-size: 0.9rem; color: var(--text-muted); background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: 999px; padding: 0.4rem 1rem; cursor: pointer; transition: border-color 0.12s, color 0.12s, background 0.12s; }
+.category:hover { border-color: var(--accent); color: var(--accent); }
+.category:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.category--active, .category--active:hover { background: var(--accent); border-color: var(--accent); color: var(--bg-raised); }
+
+.post-card__category { margin-left: auto; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+.article__category { display: inline-block; margin-bottom: 0.6rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+
+/* ---- Reactions: an icon and a count ------------------------------------------------------- */
+
+.reactions { display: flex; gap: 0.5rem; }
+.reaction {
+  position: relative; display: inline-flex; align-items: center; gap: 0.45rem;
+  font: inherit; color: var(--text-muted); background: var(--bg-raised);
+  border: 1px solid var(--border-strong); border-radius: 999px; padding: 0.35rem 0.85rem 0.35rem 0.6rem;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.reaction:hover:not(:disabled) { border-color: var(--accent); }
+.reaction:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.reaction:disabled { cursor: progress; }
+
+/* Grey until this reader presses it: the colour is the "you did this" signal, alongside aria-pressed. */
+.reaction__icon { font-size: 1.35rem; line-height: 1; filter: grayscale(1); opacity: 0.6; transition: filter 0.2s, opacity 0.2s; }
+.reaction:hover:not(:disabled) .reaction__icon { opacity: 0.9; }
+.reaction__count { font-size: 0.95rem; font-variant-numeric: tabular-nums; min-width: 1ch; margin-left: 0; opacity: 1; }
+
+.reaction--on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.reaction--on .reaction__icon { filter: none; opacity: 1; }
+.reaction--on .reaction__count { font-weight: 600; }
+
+/* The pop: the icon springs, and a ring spreads out from the button and fades. */
+.reaction--pop .reaction__icon { animation: reaction-spring 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.reaction--pop::after {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit;
+  border: 2px solid var(--accent); pointer-events: none;
+  animation: reaction-ring 0.55s ease-out forwards;
+}
+@keyframes reaction-spring {
+  0% { transform: scale(1) rotate(0); }
+  35% { transform: scale(1.55) rotate(-14deg); }
+  65% { transform: scale(0.9) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes reaction-ring {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.5, 1.9); opacity: 0; }
+}
+
+/* Readers who ask their device for less motion get the colour change only. */
+@media (prefers-reduced-motion: reduce) {
+  .reaction, .reaction__icon { transition: none; }
+  .reaction--pop .reaction__icon, .reaction--pop::after { animation: none; }
+  .reaction--pop::after { display: none; }
+}
+
+/* ---- Reading layout ------------------------------------------------------------------------ */
+
+/*
+ * A post is one column of text sized for comfortable reading. On a wide screen the room beside it
+ * is used for the author and related posts rather than left empty; on a narrow one those follow
+ * the article. The text column never grows past --measure, because longer lines are harder to read.
+ */
+.main--post { max-width: 76rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 3rem; }
+.read__article { min-width: 0; width: 100%; max-width: var(--measure); margin: 0 auto; }
+.read__aside { display: grid; gap: 2rem; align-content: start; width: 100%; max-width: var(--measure); margin: 0 auto; }
+
+@media (min-width: 1100px) {
+  .main--post { grid-template-columns: minmax(0, var(--measure)) minmax(15rem, 19rem); justify-content: center; gap: 4rem; align-items: start; }
+  .read__article, .read__aside { margin: 0; }
+  /* Stays in view while the article scrolls past. */
+  .read__aside { position: sticky; top: 5.5rem; max-width: none; }
+}
+
+.author-card { display: flex; gap: 0.9rem; align-items: flex-start; padding: 1.1rem; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); }
+.author-card__name { display: block; font-weight: 600; color: var(--text); }
+.author-card__name:hover { color: var(--accent); }
+.author-card__bio { margin: 0.3rem 0 0; font-size: 0.9rem; line-height: 1.5; color: var(--text-muted); }
+
+.related { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
+.related li { display: grid; gap: 0.15rem; }
+.related a { font-family: var(--font-read); font-size: 1.02rem; line-height: 1.35; color: var(--text); }
+.related a:hover { color: var(--accent); }
+.related span { font-size: 0.8rem; }

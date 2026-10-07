@@ -3,7 +3,8 @@
 // link previews (LinkedIn, WhatsApp, Slack), feed readers and some search crawlers. This fills
 // that gap, and nothing else:
 //
-//   /p/<post>      the normal page, with the post's title, description and picture added to its head
+//   /read/<post>   the normal page, with the post's title, description and picture added to its head
+//                  (/p/<post>, where posts used to live, is treated the same)
 //   /sitemap.xml   every published post, for search engines
 //   /rss.xml       the newest posts, for feed readers
 //

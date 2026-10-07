@@ -60,6 +60,7 @@ export interface AdminPost {
   insightful: number
   comments: number
   tags: string[]
+  category: string | null
 }
 
 export interface PostTag {
@@ -79,6 +80,7 @@ export interface PostDraft {
   coverImageUrl: string | null
   status: PostStatus
   tags: PostTag[]
+  category: { id: string; name: string; slug: string } | null
 }
 
 /** A picture stored by the API. `path` is what a post keeps; it is relative to the API. */
@@ -131,6 +133,20 @@ export interface PostInput {
   contentJson: string
   coverImageUrl: string | null
   tags: string[]
+  categoryId: string | null
+}
+
+/** A shelf for posts. `postCount` is how many published posts are on it. */
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  postCount: number
+}
+
+export interface SiteSettings {
+  theme: string
+  availableThemes: string[]
 }
 
 export interface AdminComment {

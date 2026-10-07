@@ -13,6 +13,7 @@ import { PortfolioEditPage } from './pages/PortfolioEditPage'
 import { PortfolioPage } from './pages/PortfolioPage'
 import { PostsPage } from './pages/PostsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { SitePage } from './pages/SitePage'
 import { TagsPage } from './pages/TagsPage'
 
 // The editor is by far the largest part of the app, so it loads only when a post is opened.
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="/posts/:id/edit" element={editor} />
               <Route path="/comments" element={<CommentsPage />} />
               <Route path="/tags" element={<TagsPage />} />
+              <Route path="/site" element={<SitePage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/activity" element={<ActivityPage />} />
               <Route path="/portfolio" element={<Navigate to="/portfolio/projects" replace />} />

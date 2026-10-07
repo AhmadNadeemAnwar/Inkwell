@@ -19,6 +19,7 @@ public sealed record PostQuery
     public string? SearchTerm { get; init; }
     public string? TagSlug { get; init; }
     public string? AuthorHandle { get; init; }
+    public string? CategorySlug { get; init; }
     public PostSort Sort { get; init; } = PostSort.Latest;
     public int PageNumber { get; init; } = 1;
     public int PageSize { get; init; } = 20;

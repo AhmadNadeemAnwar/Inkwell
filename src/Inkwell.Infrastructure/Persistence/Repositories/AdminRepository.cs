@@ -59,6 +59,7 @@ public class AdminRepository : IAdminRepository
     {
         var query = _db.Posts.AsNoTracking()
             .Include(p => p.Author)
+            .Include(p => p.Category)
             .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
             .AsQueryable();
 
@@ -140,6 +141,7 @@ public class AdminRepository : IAdminRepository
     public async Task<IReadOnlyList<Post>> GetAllPostsAsync(CancellationToken ct = default) =>
         await _db.Posts.AsNoTracking()
             .Include(p => p.Author)
+            .Include(p => p.Category)
             .Include(p => p.PostTags).ThenInclude(pt => pt.Tag)
             .OrderBy(p => p.CreatedAt)
             .AsSplitQuery()

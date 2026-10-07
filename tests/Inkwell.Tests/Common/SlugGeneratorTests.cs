@@ -34,6 +34,38 @@ public class SlugGeneratorTests
     }
 
     [Fact]
+    public void WithCode_keeps_the_title_and_appends_a_short_code()
+    {
+        var coded = SlugGenerator.WithCode("today-for-tomorrow");
+
+        coded.Should().MatchRegex("^today-for-tomorrow-[23456789a-hjkmnp-z]{5}$");
+        coded.Should().NotBe(SlugGenerator.WithCode("today-for-tomorrow"));
+    }
+
+    [Fact]
+    public void A_code_never_uses_characters_that_are_easy_to_misread()
+    {
+        var codes = string.Concat(Enumerable.Range(0, 400).Select(_ => SlugGenerator.WithCode("x")[2..]));
+
+        codes.Should().NotContainAny("0", "o", "1", "l", "i");
+        codes.Should().MatchRegex("^[a-z0-9]+$", "an address is lower case with no punctuation");
+    }
+
+    [Fact]
+    public void Codes_are_spread_out_rather_than_repeating()
+    {
+        var codes = Enumerable.Range(0, 2000).Select(_ => SlugGenerator.WithCode("x")).ToHashSet();
+
+        codes.Count.Should().BeGreaterThan(1990);
+    }
+
+    [Fact]
+    public void WithCode_on_an_empty_title_is_just_the_code()
+    {
+        SlugGenerator.WithCode("").Should().MatchRegex("^[23456789a-hjkmnp-z]{5}$");
+    }
+
+    [Fact]
     public void WithSuffix_keeps_the_base_and_appends_a_discriminator()
     {
         var suffixed = SlugGenerator.WithSuffix("my-post");

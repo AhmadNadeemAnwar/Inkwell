@@ -66,11 +66,14 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Everything is sized in rem, so lowering this scales the whole portal: 90% of the browser's own text size. */
+html { font-size: 90%; }
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.55 var(--font);
+  font: 0.9375rem/1.55 var(--font);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -496,3 +499,4 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, .btn:focus-vi
 .logo::after { background: #6cc79b; -webkit-mask-image: url('/logo-leaf.png'); mask-image: url('/logo-leaf.png'); }
 .sidebar__brand { display: flex; align-items: center; gap: 0.5rem; }
 .sidebar__brand .logo { height: 2rem; }
+.btn__icon { width: 1.05em; height: 1.05em; flex: none; }

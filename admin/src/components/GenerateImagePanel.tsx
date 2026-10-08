@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import type { GeneratedImage, GenerationStatus } from '../api/types'
 import { MAX_PROMPT, altFromPrompt, base64ToFile, previewSrc, promptProblem, remainingText } from '../posts/generate'
 import { extensionFor, uploadImage } from '../posts/imageUpload'
+import { SparkleIcon } from './SparkleIcon'
 import { ErrorNote } from './ui'
 
 interface Kept {
@@ -95,6 +96,7 @@ export function GenerateImagePanel({ onKeep, onClose }: { onKeep: (kept: Kept) =
               </button>
             )}
             <button type="button" className="btn btn--small" disabled={busy !== null || problem !== null || exhausted || status === null} onClick={generate}>
+              <SparkleIcon />
               {busy === 'generating' ? 'Making the picture… this can take up to half a minute' : preview ? 'Try again' : 'Generate'}
             </button>
             <button type="button" className="btn btn--small" disabled={busy !== null} onClick={onClose}>Cancel</button>

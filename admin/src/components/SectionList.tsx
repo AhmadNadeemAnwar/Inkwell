@@ -9,6 +9,7 @@ import {
 import type { Reference, Section, SectionType } from '../posts/sections'
 import { useConfirm } from './feedback'
 import { GenerateImagePanel } from './GenerateImagePanel'
+import { SparkleIcon } from './SparkleIcon'
 import { RichEditor } from './RichEditor'
 import { ErrorNote } from './ui'
 
@@ -148,7 +149,7 @@ function ImageEditor({ section, onChange }: { section: ImageSection; onChange: (
             <button type="button" className="btn btn--small" disabled={busy} onClick={() => input.current?.click()}>
               {busy ? 'Uploading…' : 'Replace picture'}
             </button>
-            {!generating && <button type="button" className="btn btn--small" onClick={() => setGenerating(true)}>Generate a different one</button>}
+            {!generating && <button type="button" className="btn btn--small" onClick={() => setGenerating(true)}><SparkleIcon />Generate a different one</button>}
           </div>
           {generating && panel}
         </>
@@ -157,7 +158,7 @@ function ImageEditor({ section, onChange }: { section: ImageSection; onChange: (
           <button type="button" className="btn btn--primary" disabled={busy} onClick={() => input.current?.click()}>
             {busy ? 'Uploading…' : 'Choose a picture'}
           </button>
-          {!generating && <button type="button" className="btn" onClick={() => setGenerating(true)}>Generate with AI</button>}
+          {!generating && <button type="button" className="btn" onClick={() => setGenerating(true)}><SparkleIcon />Generate with AI</button>}
           <p className="field__hint">JPEG, PNG or WebP. Large pictures are shrunk automatically before they are uploaded.</p>
           {generating && panel}
         </div>

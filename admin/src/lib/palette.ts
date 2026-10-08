@@ -18,6 +18,8 @@ export interface ThemeColors {
 export const MIN_TEXT_CONTRAST = 7
 /** Everything else that is read: links, buttons, small print (WCAG AA). */
 export const MIN_CONTRAST = 4.5
+/** How far greys (borders, small print, quiet bands) lean toward the main colour, so they belong to the theme. */
+export const TINT = 0.1
 
 // The API measures a background against this same pair before it will store it.
 const DARK_TEXT = '#1c1e21'
@@ -91,8 +93,9 @@ export function paletteFrom(colors: ThemeColors): Record<string, string> {
   const extreme = dark ? WHITE : BLACK
 
   // Raised cards sit a step lighter than the page; a quiet band takes a hint of the main colour.
-  const bgRaised = dark ? mix(bg, WHITE, 0.07) : mix(bg, WHITE, 0.6)
-  const bgSubtle = dark ? mix(bg, WHITE, 0.035) : mix(mix(bg, BLACK, 0.025), colors.main, 0.04)
+  const bgRaised = dark ? mix(mix(bg, WHITE, 0.07), colors.main, 0.04) : mix(bg, WHITE, 0.6)
+  const bgSubtle = dark ? mix(mix(bg, WHITE, 0.035), colors.main, 0.06) : mix(mix(bg, BLACK, 0.025), colors.main, 0.05)
+  const toward = (grey: string) => mix(grey, colors.main, TINT)
   const surfaces = [bg, bgRaised, bgSubtle]
 
   // The accent is also read on top of its own pale tint (an active button), so that tint is a surface too.
@@ -118,12 +121,12 @@ export function paletteFrom(colors: ThemeColors): Record<string, string> {
     '--bg-subtle': bgSubtle,
     '--bg-raised': bgRaised,
 
-    '--border': mix(bg, text, 0.13),
-    '--border-strong': mix(bg, text, 0.26),
+    '--border': toward(mix(bg, text, 0.13)),
+    '--border-strong': toward(mix(bg, text, 0.26)),
 
     '--text': text,
-    '--text-muted': readable(mix(text, bg, 0.35), surfaces, MIN_CONTRAST, text),
-    '--text-faint': readable(mix(text, bg, 0.5), surfaces, MIN_CONTRAST, text),
+    '--text-muted': readable(toward(mix(text, bg, 0.35)), surfaces, MIN_CONTRAST, text),
+    '--text-faint': readable(toward(mix(text, bg, 0.5)), surfaces, MIN_CONTRAST, text),
 
     '--chrome': chrome,
     '--chrome-raised': chromeRaised,

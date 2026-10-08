@@ -12,21 +12,21 @@
  * Anything placed on chrome needs --accent-chrome, not --accent: the standard accent needs
  * a lighter step to stay legible against a dark ground.
  *
- * Neutrals run true charcoal — cool grays, no cream/warm tint — with a deep blue accent
- * carrying every interactive and branded element.
+ * Neutrals are cool blue-grays, tinted toward the accent so the whole page belongs to the theme
+ * (tags, outline buttons, small print, borders), not only the header and links.
  */
 :root {
   /* Page surfaces, lightest content sits highest */
-  --bg: #f2f2f1;
-  --bg-subtle: #e6e6e4;
+  --bg: #f1f3f5;
+  --bg-subtle: #e6eaef;
   --bg-raised: #ffffff;
 
-  --border: #dbdad7;
-  --border-strong: #c3c1bd;
+  --border: #d8dee6;
+  --border-strong: #bec8d4;
 
   --text: #1c1e21;
-  --text-muted: #5c5f66;
-  --text-faint: #8a8d93;
+  --text-muted: #4f5d6e;
+  --text-faint: #5b6a80;
 
   /* Chrome surfaces */
   --chrome: #202327;
@@ -54,16 +54,16 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Page surfaces step upward in lightness so cards read as raised, not merged */
-    --bg: #17181a;
-    --bg-subtle: #1e2023;
-    --bg-raised: #26282c;
+    --bg: #16181c;
+    --bg-subtle: #1c2026;
+    --bg-raised: #232830;
 
-    --border: #2f3236;
-    --border-strong: #40434a;
+    --border: #2c333c;
+    --border-strong: #3c4552;
 
     --text: #ececee;
-    --text-muted: #a3a6ac;
-    --text-faint: #77797f;
+    --text-muted: #a3adba;
+    --text-faint: #8592a3;
 
     /* Chrome goes deeper than the page, so the frame still separates from the content */
     --chrome: #0b0c0e;
@@ -95,15 +95,15 @@
   color-scheme: light;
 
   --bg: #ffffff;
-  --bg-subtle: #f1f7f4;
+  --bg-subtle: #edf6f1;
   --bg-raised: #ffffff;
 
-  --border: #dfe9e4;
-  --border-strong: #c4d5cc;
+  --border: #d5e6dd;
+  --border-strong: #b9d3c6;
 
   --text: #1c1e21;
-  --text-muted: #5c5f66;
-  --text-faint: #6b6f75;
+  --text-muted: #4d6058;
+  --text-faint: #5a6e65;
 
   --chrome: #17694a;
   --chrome-raised: #1e7a56;
@@ -122,12 +122,15 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Everything is sized in rem, so lowering this scales the whole site: 90% of the browser's own text size. */
+html { font-size: 90%; }
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
@@ -252,15 +255,16 @@ input:focus, textarea:focus, select:focus {
   align-items: center;
   gap: 0.4rem;
   border: 1px solid var(--border-strong);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border-strong));
   background: var(--bg-raised);
-  color: var(--text);
+  color: var(--accent);
   border-radius: 999px;
   padding: 0.4rem 0.9rem;
   font-size: 0.9rem;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn--primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
@@ -268,7 +272,7 @@ input:focus, textarea:focus, select:focus {
 
 .btn--ghost { border-color: transparent; background: transparent; }
 .btn--active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-.btn--danger { color: var(--danger); }
+.btn--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border-strong)); }
 .btn--danger:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
 .btn--block { width: 100%; justify-content: center; }
 .btn--icon { width: 2.15rem; height: 2.15rem; padding: 0; justify-content: center; flex: none; }
@@ -310,15 +314,16 @@ input:focus, textarea:focus, select:focus {
 
 .pill {
   display: inline-block;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--accent-soft));
   border-radius: 999px;
   padding: 0.15rem 0.6rem;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--accent);
 }
 
-.pill:hover { border-color: var(--accent); color: var(--accent); }
+.pill:hover { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 .pill-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 
 /* ---- Reading view --------------------------------------------------------- */

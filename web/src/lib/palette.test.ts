@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MIN_CONTRAST, MIN_TEXT_CONTRAST, backgroundProblem, contrast, mix, paletteFrom, toColors, toHex } from './palette'
+import { MIN_CONTRAST, MIN_TEXT_CONTRAST, TINT, backgroundProblem, contrast, mix, paletteFrom, toColors, toHex } from './palette'
 
 describe('toHex', () => {
   it('accepts a plain six-digit colour, whatever its capitals or spacing', () => {
@@ -115,5 +115,34 @@ describe('paletteFrom', () => {
     expect(palette['--chrome']).toBe('#ffd400')
     expect(palette['--accent']).not.toBe('#ffd400')
     expect(palette['--chrome-text']).toBe('#000000')
+  })
+})
+
+describe('greys that belong to the theme', () => {
+  // How far a colour leans green rather than red: a neutral grey scores about zero.
+  const greenLean = (hex: string) => parseInt(hex.slice(3, 5), 16) - parseInt(hex.slice(1, 3), 16)
+
+  it('leans borders and small print toward the main colour instead of staying neutral', () => {
+    const tinted = paletteFrom({ main: '#17694a', background: '#ffffff' })
+    const neutral = { border: mix('#ffffff', '#1c1e21', 0.13), muted: mix('#1c1e21', '#ffffff', 0.35) }
+
+    expect(greenLean(tinted['--border'])).toBeGreaterThan(greenLean(neutral.border) + 3)
+    expect(greenLean(tinted['--border-strong'])).toBeGreaterThan(greenLean(mix('#ffffff', '#1c1e21', 0.26)) + 3)
+    expect(greenLean(tinted['--text-muted'])).toBeGreaterThan(greenLean(neutral.muted) + 2)
+  })
+
+  it('does the same on a dark page', () => {
+    const tinted = paletteFrom({ main: '#17694a', background: '#101418' })
+
+    expect(greenLean(tinted['--border'])).toBeGreaterThan(greenLean(mix('#101418', '#ececee', 0.13)) + 2)
+    expect(greenLean(tinted['--bg-subtle'])).toBeGreaterThan(greenLean(mix('#101418', '#ffffff', 0.035)))
+  })
+
+  it('keeps the tint gentle, so text colours stay recognisably grey', () => {
+    expect(TINT).toBeLessThanOrEqual(0.12)
+    const { '--text-muted': muted } = paletteFrom({ main: '#ff0000', background: '#ffffff' })
+    const [r, g, b] = [1, 3, 5].map((at) => parseInt(muted.slice(at, at + 2), 16))
+
+    expect(r - Math.max(g, b)).toBeLessThan(60)
   })
 })

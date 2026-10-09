@@ -2,4 +2,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://inkwell.ahmadnadeem.dev/sitemap.xml
+Sitemap: https://articles.ahmadnadeem.dev/sitemap.xml

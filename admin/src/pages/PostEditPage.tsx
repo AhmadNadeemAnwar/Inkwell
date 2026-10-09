@@ -236,7 +236,7 @@ export function PostEditPage() {
     if (ask) {
       const ok = await confirm(
         target === 'Published'
-          ? { title: 'Publish this post?', message: 'It goes live on Inkwell straight away.', confirmLabel: 'Publish' }
+          ? { title: 'Publish this post?', message: 'It goes live on the site straight away.', confirmLabel: 'Publish' }
           : status === 'Published'
             ? {
                 title: target === 'Inactive' ? 'Make this post not active?' : 'Move this post back to draft?',
@@ -258,7 +258,7 @@ export function PostEditPage() {
       const post = await api.postForEdit(id)
       setStatus(post.status)
       setSlug(post.slug)
-      notify(target === 'Published' ? 'Published. It is live on Inkwell now.' : `Post is now ${statusLabels[target].toLowerCase()}.`)
+      notify(target === 'Published' ? 'Published. It is live now.' : `Post is now ${statusLabels[target].toLowerCase()}.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not change the status of this post.')
     } finally {

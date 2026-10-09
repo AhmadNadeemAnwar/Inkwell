@@ -558,17 +558,3 @@ input:focus, textarea:focus, select:focus {
 .notice { margin-top: 2rem; }
 .notice h1 { font-family: var(--font-read); font-size: 1.6rem; margin: 0 0 0.6rem; }
 .notice p { margin: 0 0 1.25rem; color: var(--text-muted); }
-
-/* The logo: ink follows the header's text colour, the leaf stays green. Aspect ratio is the mask files' (253 x 96). */
-.logo { display: inline-block; position: relative; height: 2.25rem; aspect-ratio: 253 / 96; vertical-align: middle; }
-.logo::before, .logo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  -webkit-mask-size: contain; mask-size: contain;
-  -webkit-mask-position: left center; mask-position: left center;
-}
-.logo::before { background: var(--chrome-text); -webkit-mask-image: url('/logo-ink.png'); mask-image: url('/logo-ink.png'); }
-.logo::after { background: #6cc79b; -webkit-mask-image: url('/logo-leaf.png'); mask-image: url('/logo-leaf.png'); }
-.brand { display: inline-flex; align-items: center; }

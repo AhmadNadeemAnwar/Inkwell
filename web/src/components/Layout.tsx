@@ -3,7 +3,6 @@ import type { FormEvent } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { PORTFOLIO_URL } from '../lib/site'
 import { useSite } from '../lib/siteContext'
-import { Logo } from './Logo'
 import { SubscribeForm } from './SubscribeForm'
 import { ThemePicker } from './ThemePicker'
 
@@ -22,7 +21,7 @@ export function Layout() {
     <div className="app">
       <header className="header">
         <div className="header__inner">
-          <Link to="/" className="brand" aria-label="Inkwell, home"><Logo /></Link>
+          <Link to="/" className="brand">Articles</Link>
 
           <form className="header__search" onSubmit={onSearch} role="search">
             <input
@@ -54,7 +53,7 @@ export function Layout() {
           </div>
         )}
         <div className="footer__inner">
-          <span>Inkwell</span>
+          <span>Articles by Ahmad Nadeem</span>
           <nav aria-label="Site">
             <Link to="/privacy">Privacy</Link>
             {PORTFOLIO_URL && <a href={PORTFOLIO_URL}>About the author</a>}

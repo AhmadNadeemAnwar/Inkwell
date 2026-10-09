@@ -19,7 +19,7 @@ public sealed class EmailOptions
     /// <summary>The address emails come from. Must belong to a domain verified in Brevo.</summary>
     public string FromAddress { get; set; } = string.Empty;
 
-    public string FromName { get; set; } = "Inkwell";
+    public string FromName { get; set; } = "Articles by Ahmad Nadeem";
 
     /// <summary>The public site's address, for links in emails. No trailing slash.</summary>
     public string SiteUrl { get; set; } = "http://localhost:5173";

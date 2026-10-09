@@ -124,6 +124,22 @@ public class EmailTemplatesTests
     private const string Site = "https://inkwell.example";
 
     [Fact]
+    public void No_email_still_calls_the_site_Inkwell_and_both_say_who_writes_it()
+    {
+        var confirmation = EmailTemplates.Confirmation("reader@example.com", $"{Site}/subscribe/confirm?token=abc.def", Site);
+        var announcement = EmailTemplates.NewPost("reader@example.com", "A title", "An excerpt.", $"{Site}/read/a-title", $"{Site}/unsubscribe?token=abc", Site);
+
+        foreach (var message in new[] { confirmation, announcement })
+        {
+            (message.Subject + message.Text + message.Html).Should().NotContain("Inkwell");
+            (message.Text + message.Html).Should().Contain("Articles by Ahmad Nadeem");
+        }
+
+        confirmation.Subject.Should().Be("Confirm your subscription to Articles");
+        announcement.Subject.Should().Be("New article: A title");
+    }
+
+    [Fact]
     public void The_confirmation_carries_its_link_in_both_forms_and_says_what_to_do_if_it_was_not_you()
     {
         var message = EmailTemplates.Confirmation("reader@example.com", $"{Site}/subscribe/confirm?token=abc.def", Site);
@@ -139,7 +155,7 @@ public class EmailTemplatesTests
     {
         var message = EmailTemplates.NewPost("reader@example.com", "Today for Tomorrow", "A short excerpt.", $"{Site}/read/today-for-tomorrow", $"{Site}/unsubscribe?token=abc.def", Site);
 
-        message.Subject.Should().Be("New on Inkwell: Today for Tomorrow");
+        message.Subject.Should().Be("New article: Today for Tomorrow");
         message.Text.Should().Contain("A short excerpt.").And.Contain($"{Site}/read/today-for-tomorrow").And.Contain($"Unsubscribe: {Site}/unsubscribe?token=abc.def");
         message.Html.Should().Contain("Today for Tomorrow").And.Contain("/read/today-for-tomorrow").And.Contain("Unsubscribe");
         message.UnsubscribeUrl.Should().Be($"{Site}/unsubscribe?token=abc.def");
@@ -160,7 +176,7 @@ public class EmailTemplatesTests
         var message = EmailTemplates.NewPost("reader@example.com", "A title\r\nBcc: victim@example.com", "Excerpt.", $"{Site}/read/x", $"{Site}/unsubscribe?token=t", Site);
 
         message.Subject.Should().NotContain("\r").And.NotContain("\n");
-        message.Subject.Should().Be("New on Inkwell: A title Bcc: victim@example.com");
+        message.Subject.Should().Be("New article: A title Bcc: victim@example.com");
     }
 }
 
@@ -514,7 +530,7 @@ public class SubscriptionServiceTests : IDisposable
         result.Should().BeEquivalentTo(new { Sent = 2, Failed = 0, Remaining = 0 });
         result.NotifiedAt.Should().Be(_clock.GetUtcNow());
         _email.Sent.Select(m => m.To).Should().BeEquivalentTo(["a@example.com", "b@example.com"]);
-        _email.Sent.Should().OnlyContain(m => m.Subject == "New on Inkwell: Today for Tomorrow" && m.Text.Contains($"https://inkwell.example/read/{slug}") && m.Text.Contains("A subtitle for the email."));
+        _email.Sent.Should().OnlyContain(m => m.Subject == "New article: Today for Tomorrow" && m.Text.Contains($"https://inkwell.example/read/{slug}") && m.Text.Contains("A subtitle for the email."));
     }
 
     [Fact]

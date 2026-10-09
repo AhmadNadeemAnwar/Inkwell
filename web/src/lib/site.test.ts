@@ -5,17 +5,17 @@ import { normalise, pageTitle } from './site'
 
 describe('pageTitle', () => {
   it('puts the page first and the site second', () => {
-    expect(pageTitle('What I learned')).toBe('What I learned · Inkwell')
+    expect(pageTitle('What I learned')).toBe('What I learned · Articles')
   })
 
   it('is just the site name when the page has no name yet', () => {
-    expect(pageTitle()).toBe('Inkwell')
-    expect(pageTitle(null)).toBe('Inkwell')
-    expect(pageTitle('   ')).toBe('Inkwell')
+    expect(pageTitle()).toBe('Articles')
+    expect(pageTitle(null)).toBe('Articles')
+    expect(pageTitle('   ')).toBe('Articles')
   })
 
   it('tidies stray spacing and line breaks in a title', () => {
-    expect(pageTitle('  Two\n  lines ')).toBe('Two lines · Inkwell')
+    expect(pageTitle('  Two\n  lines ')).toBe('Two lines · Articles')
   })
 })
 

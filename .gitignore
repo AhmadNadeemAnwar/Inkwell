@@ -29,3 +29,6 @@ Thumbs.db
 
 ## Cloudflare Wrangler: local cache and temp files from `wrangler dev`
 .wrangler/
+
+# Local copies of posts (see backups/). Not part of the code.
+backups/

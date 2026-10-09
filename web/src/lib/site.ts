@@ -1,4 +1,4 @@
-export const SITE_NAME = 'Inkwell'
+export const SITE_NAME = 'Articles'
 
 /**
  * The owner's main site. Empty until that site is reachable: the link, and the contact line on the

@@ -21,7 +21,7 @@ export function PrivacyPage() {
         <p className="faint">Last updated {LAST_UPDATED}</p>
 
         <p>
-          Inkwell is a personal site for reading articles. There are no reader accounts, no advertising, and nothing
+          Articles is the personal blog of Ahmad Nadeem. There are no reader accounts, no advertising, and nothing
           here is sold or shared for marketing. This page lists everything the site records when you visit
           {subscribeEnabled && <>, and what it keeps if you choose to subscribe by email</>}.
         </p>

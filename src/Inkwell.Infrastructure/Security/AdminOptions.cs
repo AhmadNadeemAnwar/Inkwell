@@ -8,7 +8,7 @@ public sealed class AdminOptions
 {
     public const string SectionName = "Admin";
 
-    /// <summary>Emails of the people allowed into the admin portal. Each must also be an existing Inkwell account.</summary>
+    /// <summary>Emails of the people allowed into the admin portal. Each must also be an existing account.</summary>
     public string[] Emails { get; set; } = [];
 
     /// <summary>Base32 secret shared with the authenticator app. Generate one with the AdminSetup tool; never commit it.</summary>

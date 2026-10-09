@@ -149,7 +149,7 @@ function CustomColours({ current, saving, onSave }: {
 
         {!problem && (
           <div className="theme-preview" style={previewStyle(picked)} aria-label="Preview of the public site">
-            <div className="theme-preview__header"><strong>Inkwell</strong><span>Search articles</span></div>
+            <div className="theme-preview__header"><strong>Articles</strong><span>Search articles</span></div>
             <div className="theme-preview__page">
               <p className="theme-preview__title">A post title</p>
               <p className="theme-preview__meta">7 October · 4 min read</p>

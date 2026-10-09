@@ -39,13 +39,14 @@ export const schema: Record<Collection, Field[]> = {
   updates: [
     { key: 'title', label: 'Update', kind: 'text', required: true, max: 200, help: 'A short note: “Shipped X”, “Started Y”.' },
     { key: 'date', label: 'Date', kind: 'date', required: true },
-    { key: 'link', label: 'Link', kind: 'link', max: 500, help: 'Optional. A full https:// link, or a path on the site like /blog/my-post.', placeholder: 'https://…' },
+    { key: 'link', label: 'Link', kind: 'link', max: 500, help: 'Optional. A full https:// link, or a path on the site like /portfolio/my-project.', placeholder: 'https://…' },
   ],
 }
 
 export const collectionLabels: Record<Collection, string> = { blog: 'Blog', projects: 'Projects', updates: 'Updates' }
 
-export const collections: Collection[] = ['blog', 'projects', 'updates']
+// The portfolio no longer has a blog (the writing lives on Articles), so the portal offers only these two.
+export const collections: Collection[] = ['projects', 'updates']
 
 export function isCollection(value: string | undefined): value is Collection {
   return value === 'blog' || value === 'projects' || value === 'updates'

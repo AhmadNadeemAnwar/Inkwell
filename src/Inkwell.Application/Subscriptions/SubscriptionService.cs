@@ -274,21 +274,21 @@ public static class EmailTemplates
 {
     public static EmailMessage Confirmation(string to, string confirmUrl, string siteUrl)
     {
-        const string subject = "Confirm your subscription to Inkwell";
+        const string subject = "Confirm your subscription to Articles";
 
         var text = $"""
-            Someone asked for new Inkwell articles to be sent to this address.
+            Someone asked for new articles by Ahmad Nadeem to be sent to this address.
 
             If that was you, confirm here:
             {confirmUrl}
 
             If it was not you, ignore this email: you will not be subscribed and will not hear from us again.
 
-            Inkwell - {siteUrl}
+            Articles by Ahmad Nadeem - {siteUrl}
             """;
 
         var html = Layout($"""
-            <p>Someone asked for new Inkwell articles to be sent to this address.</p>
+            <p>Someone asked for new articles by Ahmad Nadeem to be sent to this address.</p>
             <p>If that was you, confirm here:</p>
             <p>{Button(confirmUrl, "Confirm my subscription")}</p>
             <p style="color:#5c5f66;font-size:14px">If it was not you, ignore this email: you will not be subscribed and will not hear from us again.</p>
@@ -299,7 +299,7 @@ public static class EmailTemplates
 
     public static EmailMessage NewPost(string to, string title, string excerpt, string postUrl, string unsubscribeUrl, string siteUrl)
     {
-        var subject = $"New on Inkwell: {SingleLine(title)}";
+        var subject = $"New article: {SingleLine(title)}";
 
         var text = $"""
             {SingleLine(title)}
@@ -309,7 +309,7 @@ public static class EmailTemplates
             Read it here:
             {postUrl}
 
-            You are receiving this because you subscribed to Inkwell.
+            You are receiving this because you subscribed to Articles by Ahmad Nadeem.
             Unsubscribe: {unsubscribeUrl}
             """;
 
@@ -325,8 +325,8 @@ public static class EmailTemplates
     private static string Layout(string body, string siteUrl, string? unsubscribeUrl)
     {
         var footer = unsubscribeUrl is null
-            ? $"""<a href="{Escape(siteUrl)}" style="color:#8a8d93">Inkwell</a>"""
-            : $"""You are receiving this because you subscribed to <a href="{Escape(siteUrl)}" style="color:#8a8d93">Inkwell</a>. <a href="{Escape(unsubscribeUrl)}" style="color:#8a8d93">Unsubscribe</a>""";
+            ? $"""<a href="{Escape(siteUrl)}" style="color:#8a8d93">Articles by Ahmad Nadeem</a>"""
+            : $"""You are receiving this because you subscribed to <a href="{Escape(siteUrl)}" style="color:#8a8d93">Articles by Ahmad Nadeem</a>. <a href="{Escape(unsubscribeUrl)}" style="color:#8a8d93">Unsubscribe</a>""";
 
         return $"""
             <!doctype html>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_SHARE_IMAGE, FETCHER_TIMEOUT_MS, PREVIEW_FRESH_MS, READER_TIMEOUT_MS, absoluteImage, firstImageId, isStale, mediaIdFromPath, oldPostRedirect, buildRss, buildSitemap, describePost, escapeText, headTags, plainText,
+  DEFAULT_SHARE_IMAGE, FETCHER_TIMEOUT_MS, LATEST_COUNT, LATEST_READERS, buildLatest, corsHeadersFor, PREVIEW_FRESH_MS, READER_TIMEOUT_MS, absoluteImage, firstImageId, isStale, mediaIdFromPath, oldPostRedirect, buildRss, buildSitemap, describePost, escapeText, headTags, plainText,
   slugFromPath, summarise, timeoutFor,
 } from './meta.js'
 
@@ -256,10 +256,10 @@ describe('headTags', () => {
     const meta = describePost(post(), SITE)
     const tags = headTags(meta, 'Inkwell')
 
-    expect(meta.image).toBe('https://inkwell.example/inkwell-share.png')
-    expect(DEFAULT_SHARE_IMAGE).toBe('/inkwell-share.png')
+    expect(meta.image).toBe('https://inkwell.example/articles-share.png')
+    expect(DEFAULT_SHARE_IMAGE).toBe('/articles-share.png')
     expect(tags).toContain('<meta name="twitter:card" content="summary_large_image">')
-    expect(tags).toContain('<meta property="og:image" content="https://inkwell.example/inkwell-share.png">')
+    expect(tags).toContain('<meta property="og:image" content="https://inkwell.example/articles-share.png">')
   })
 
   it('prefers the posts own picture over the logo card', () => {
@@ -336,5 +336,46 @@ describe('buildRss', () => {
 
     expect(xml).not.toContain('<item>')
     expect(xml.trimEnd().endsWith('</channel></rss>')).toBe(true)
+  })
+})
+
+describe('buildLatest', () => {
+  const many = ['one', 'two', 'three', 'four', 'five'].map((slug) => post({ slug, title: `Post ${slug}` }))
+
+  it('lists only the newest few, with an absolute link, a date and a summary', () => {
+    const data = JSON.parse(buildLatest([...many, post({ slug: 'six', subtitle: 'A subtitle.' })], SITE))
+
+    expect(LATEST_COUNT).toBe(3)
+    expect(data.items.map((i) => i.title)).toEqual(['Post one', 'Post two', 'Post three'])
+    expect(data.items[0]).toEqual({ title: 'Post one', url: 'https://inkwell.example/read/one', date: expect.stringMatching(/^2026-10-01/), summary: expect.any(String) })
+    expect(data.url).toBe('https://inkwell.example/')
+  })
+
+  it('uses the subtitle as the summary when there is one', () => {
+    expect(JSON.parse(buildLatest([post({ subtitle: 'The subtitle.' })], SITE)).items[0].summary).toBe('The subtitle.')
+  })
+
+  it('skips anything without a usable address', () => {
+    const data = JSON.parse(buildLatest([post({ slug: 'Bad Slug!' }), post({ slug: 'good-one' }), null], SITE))
+
+    expect(data.items.map((i) => i.url)).toEqual(['https://inkwell.example/read/good-one'])
+  })
+
+  it('is an empty list, not an error, when there are no posts', () => {
+    expect(JSON.parse(buildLatest([], SITE)).items).toEqual([])
+  })
+
+  it('keeps markup in a title as plain text for the reader to escape', () => {
+    expect(JSON.parse(buildLatest([post({ title: '<b>Hi</b> & "bye"' })], SITE)).items[0].title).toBe('<b>Hi</b> & "bye"')
+  })
+})
+
+describe('corsHeadersFor', () => {
+  it('lets the portfolio, with or without www, read the list', () => {
+    for (const origin of LATEST_READERS) expect(corsHeadersFor(origin)).toEqual({ 'Access-Control-Allow-Origin': origin, Vary: 'Origin' })
+  })
+
+  it.each([null, undefined, '', 'https://evil.example', 'http://ahmadnadeem.dev', 'https://ahmadnadeem.dev.evil.example', 'https://sub.ahmadnadeem.dev'])('gives no permission to %s', (origin) => {
+    expect(corsHeadersFor(origin)).toEqual({ Vary: 'Origin' })
   })
 })

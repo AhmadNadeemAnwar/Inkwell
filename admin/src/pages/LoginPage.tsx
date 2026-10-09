@@ -31,7 +31,7 @@ export function LoginPage() {
   return (
     <main className="login">
       <form className="login__card" onSubmit={submit}>
-        <h1>Inkwell Admin</h1>
+        <h1>Articles Admin</h1>
         <p className="muted">Sign in with your email and the 6-digit code from your authenticator app.</p>
 
         {error && <ErrorNote message={error} />}

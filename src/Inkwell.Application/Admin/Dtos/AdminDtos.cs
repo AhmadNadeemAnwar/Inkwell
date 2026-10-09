@@ -28,7 +28,7 @@ public sealed record ExportedPostDto(
     int Insightful,
     /// <summary>The body as plain words, readable anywhere.</summary>
     string PlainText,
-    /// <summary>The body exactly as stored, with its sections and formatting, for restoring into Inkwell.</summary>
+    /// <summary>The body exactly as stored, with its sections and formatting, for restoring into Articles.</summary>
     string ContentJson);
 
 public sealed record TopPostDto(Guid Id, string Title, string? Slug, int Views, int Claps, int Comments);

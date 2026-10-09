@@ -38,7 +38,7 @@ export function PostsPage() {
     setExporting(true)
     try {
       const data = await api.exportPosts()
-      saveAsFile(`inkwell-posts-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2))
+      saveAsFile(`articles-posts-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2))
       notify(`Saved ${formatNumber(data.postCount)} ${data.postCount === 1 ? 'post' : 'posts'} to your downloads.`)
     } catch (err) {
       notify(err instanceof Error ? err.message : 'The export did not work.', 'error')
@@ -93,7 +93,7 @@ export function PostsPage() {
 
     const ok = await confirm(
       target === 'Published'
-        ? { title: 'Publish this post?', message: <>“{post.title}” goes live on Inkwell straight away{post.slug ? ', at the same address as before' : ''}.</>, confirmLabel: 'Publish' }
+        ? { title: 'Publish this post?', message: <>“{post.title}” goes live on the site straight away{post.slug ? ', at the same address as before' : ''}.</>, confirmLabel: 'Publish' }
         : post.status === 'Published'
           ? {
               title: 'Take this post down?',

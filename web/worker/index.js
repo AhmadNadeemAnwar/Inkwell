@@ -10,6 +10,7 @@
 //                  so readers are not left waiting on the API for pictures
 //   /sitemap.xml   every published post, for search engines
 //   /rss.xml       the newest posts, for feed readers
+//   /latest.json   the three newest posts, for the portfolio's "Latest writing" (readable only from there)
 //
 // It runs only for those addresses (see run_worker_first in wrangler.jsonc); every other request is
 // served straight from the static files and never reaches this code. If the API is slow or down,
@@ -18,7 +19,7 @@
 // Free plan allowance: 100,000 runs a day. One run per post page opened, plus feed and sitemap fetches.
 
 import {
-  IMAGE_TYPES, buildRss, buildSitemap, describePost, headTags, isStale, mediaIdFromPath, oldPostRedirect, slugFromPath, timeoutFor,
+  IMAGE_TYPES, buildLatest, buildRss, buildSitemap, corsHeadersFor, describePost, headTags, isStale, mediaIdFromPath, oldPostRedirect, slugFromPath, timeoutFor,
 } from './meta.js'
 
 const LIST_TIMEOUT_MS = 20000
@@ -30,15 +31,16 @@ const POST_CACHE_SECONDS = 6 * 60 * 60
 const LIST_CACHE_SECONDS = 600
 const MAX_LISTED_POSTS = 500
 const RSS_ITEMS = 30
+const LATEST_LIMIT = 3
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url)
     const site = {
-      siteName: env.SITE_NAME || 'Inkwell',
+      siteName: env.SITE_NAME || 'Articles',
       siteOrigin: url.origin,
       apiBase: String(env.API_BASE || '').replace(/\/+$/, ''),
-      description: env.SITE_DESCRIPTION || 'Articles on Inkwell.',
+      description: env.SITE_DESCRIPTION || 'Articles by Ahmad Nadeem.',
     }
 
     if (request.method === 'GET' || request.method === 'HEAD') {
@@ -48,6 +50,13 @@ export default {
         }
         if (url.pathname === '/rss.xml') {
           return await cachedDocument(request, ctx, 'application/rss+xml; charset=utf-8', async () => buildRss(await listPosts(site, RSS_ITEMS), site))
+        }
+        if (url.pathname === '/latest.json') {
+          // The stored copy is shared by every reader, so the CORS answer is added after it, per request.
+          const stored = await cachedDocument(request, ctx, 'application/json; charset=utf-8', async () => buildLatest(await listPosts(site, LATEST_LIMIT), site))
+          const answer = new Response(stored.body, stored)
+          for (const [name, value] of Object.entries(corsHeadersFor(request.headers.get('Origin')))) answer.headers.set(name, value)
+          return answer
         }
 
         const mediaId = mediaIdFromPath(url.pathname)
@@ -63,8 +72,8 @@ export default {
         const slug = slugFromPath(url.pathname)
         if (slug) return await postPage(request, env, ctx, site, slug)
       } catch (error) {
-        if (url.pathname.endsWith('.xml')) {
-          // An empty feed or sitemap would tell readers and search engines that every post is gone.
+        if (url.pathname.endsWith('.xml') || url.pathname.endsWith('.json')) {
+          // An empty feed, list or sitemap would tell readers and search engines that every post is gone.
           return new Response('Temporarily unavailable. Please try again shortly.\n', {
             status: 503,
             headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '120', 'Cache-Control': 'no-store' },

@@ -126,7 +126,7 @@ public sealed class AdminService : IAdminService
             p.CoverImageUrl, p.ViewCount, p.ClapCount, p.InsightfulCount, p.PlainText, p.ContentJson)).ToList();
 
         await _activity.RecordAsync(admin, Activity.ExportedPosts, $"{exported.Count} posts", ct);
-        return new ExportDto("Inkwell", 1, _time.GetUtcNow(), exported.Count, exported);
+        return new ExportDto("Articles", 1, _time.GetUtcNow(), exported.Count, exported);
     }
 
     public async Task DeletePostAsync(Guid postId, string admin, CancellationToken ct = default)

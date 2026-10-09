@@ -11,7 +11,7 @@ public static class SwaggerServiceExtensions
         {
             options.SwaggerDoc("v1", new OpenApiInfo
             {
-                Title = "Inkwell API",
+                Title = "Articles API",
                 Version = "v1",
                 Description = "A publishing platform: write, publish, discover and discuss posts."
             });

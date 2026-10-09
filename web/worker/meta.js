@@ -146,7 +146,7 @@ export function absoluteImage(value, siteOrigin) {
 }
 
 /** The logo card shown when a shared link has no picture. A file in web/public. */
-export const DEFAULT_SHARE_IMAGE = '/inkwell-share.png'
+export const DEFAULT_SHARE_IMAGE = '/articles-share.png'
 
 /** What a shared link to a post should show. */
 export function describePost(post, { siteName, siteOrigin }) {
@@ -203,6 +203,29 @@ export function buildSitemap(posts, siteOrigin) {
     entry(`${siteOrigin}/privacy`),
   ]
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>\n`
+}
+
+/** The few newest posts as JSON, for another site (the portfolio) to list. Only what a link needs. */
+export const LATEST_COUNT = 3
+
+export function buildLatest(posts, { siteName, siteOrigin }, limit = LATEST_COUNT) {
+  const items = published(posts)
+    .slice(0, limit)
+    .map((post) => ({
+      title: String(post.title ?? ''),
+      url: `${siteOrigin}/read/${post.slug}`,
+      date: isoDate(post.publishedAt),
+      summary: summarise(post.subtitle || post.excerpt || ''),
+    }))
+  return JSON.stringify({ site: siteName, url: `${siteOrigin}/`, items })
+}
+
+/** Sites allowed to read /latest.json from the browser: the portfolio, with or without www. */
+export const LATEST_READERS = ['https://ahmadnadeem.dev', 'https://www.ahmadnadeem.dev']
+
+/** The CORS header for a request from `origin`, or none: only the listed sites may read the file. */
+export function corsHeadersFor(origin, allowed = LATEST_READERS) {
+  return allowed.includes(origin) ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : { Vary: 'Origin' }
 }
 
 export function buildRss(posts, { siteName, siteOrigin, description }) {

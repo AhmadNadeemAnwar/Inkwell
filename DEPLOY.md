@@ -1,7 +1,7 @@
-# Deploying Inkwell to inkwell.ahmadnadeem.dev
+# Deploying Articles to articles.ahmadnadeem.dev
 
 ```
-Browser ──> inkwell.ahmadnadeem.dev      Cloudflare Workers (static React app)
+Browser ──> articles.ahmadnadeem.dev      Cloudflare Workers (static React app)
                │
                └──> <name>.onrender.com        Render free web service (.NET API, Docker)
                          │
@@ -73,7 +73,7 @@ public site. That adds "About the author" to the header and footer and a contact
    | `Database__Provider` | `Postgres` |
    | `ConnectionStrings__Default` | the Neon string from step 1 |
    | `Jwt__Key` | a long random secret (generate below) |
-   | `Cors__AllowedOrigins__0` | `https://inkwell.ahmadnadeem.dev` |
+   | `Cors__AllowedOrigins__0` | `https://articles.ahmadnadeem.dev` |
 
    ```bash
    python -c "import secrets; print(secrets.token_urlsafe(48))"
@@ -102,11 +102,11 @@ npx wrangler deploy
 
 `wrangler login` opens a browser so you can approve access to your Cloudflare account.
 `wrangler deploy` uploads the build and, because `wrangler.jsonc` declares the custom domain, also
-creates `inkwell.ahmadnadeem.dev` and its DNS record (your domain is already on that account).
+creates `articles.ahmadnadeem.dev` and its DNS record (your domain is already on that account).
 
 ## 4. Check it
 
-Open https://inkwell.ahmadnadeem.dev (the first load may be slow while Render wakes up), register,
+Open https://articles.ahmadnadeem.dev (the first load may be slow while Render wakes up), register,
 write a post, publish it, then open the post link in a private window.
 
 ## Updating later
@@ -128,7 +128,7 @@ clap or Save buttons, and no comment box. The API refuses sign-ups too (`403`), 
 is not the only protection. This is the default in Production (`Accounts:AllowPublicSignUp` is
 `false` in `appsettings.Production.json`).
 
-**To write or manage posts, sign in at `https://inkwell.ahmadnadeem.dev/login`.** The page still
+**To write or manage posts, sign in at `https://articles.ahmadnadeem.dev/login`.** The page still
 exists but nothing links to it, so bookmark it. Sessions last 24 hours.
 
 **To open sign-ups again**, set `Accounts__AllowPublicSignUp` to `true` in Render's environment
@@ -140,14 +140,14 @@ API what the policy is. If the API cannot be reached the web app assumes "closed
 ### One-time Cloudflare settings (dashboard, free)
 
 1. **SSL/TLS > Edge Certificates > Always Use HTTPS: On.** Without it,
-   `http://inkwell.ahmadnadeem.dev` answers in plain text instead of redirecting.
+   `http://articles.ahmadnadeem.dev` answers in plain text instead of redirecting.
 2. The site also sends an HSTS header, so browsers stick to HTTPS after the first visit.
 
 ### Optional: Turnstile bot check on sign-up (free)
 
 Off until you configure it, and everything works without it.
 
-1. Cloudflare dashboard > **Turnstile > Add widget**. Hostname: `inkwell.ahmadnadeem.dev`.
+1. Cloudflare dashboard > **Turnstile > Add widget**. Hostname: `articles.ahmadnadeem.dev`.
 2. Put the **site key** in `web/.env.production` as `VITE_TURNSTILE_SITE_KEY`, then rebuild and
    `npx.cmd wrangler deploy`.
 3. Put the **secret key** in Render as `Turnstile__SecretKey`.

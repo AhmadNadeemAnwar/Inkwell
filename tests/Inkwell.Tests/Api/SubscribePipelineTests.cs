@@ -194,7 +194,7 @@ public class SubscribePipelineTests : IClassFixture<AdminApiFactory>
         result.GetProperty("remaining").GetInt32().Should().Be(0);
 
         var message = _email.Sent.Last(m => m.To == address);
-        message.Subject.Should().Be("New on Inkwell: Announced to subscribers");
+        message.Subject.Should().Be("New article: Announced to subscribers");
         message.Text.Should().Contain($"/read/{slug}").And.Contain("Worth reading.");
 
         // A second press reaches nobody.

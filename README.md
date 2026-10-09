@@ -1,9 +1,9 @@
-# Inkwell
+# Articles
 
-A personal publishing site. One owner writes; anyone can read, search, react and subscribe.
-There are no reader accounts.
+The blog part of Ahmad Nadeem's website (his portfolio is at https://ahmadnadeem.dev). One owner writes; anyone
+can read, search, react and subscribe. There are no reader accounts.
 
-Live at https://inkwell.ahmadnadeem.dev, with a private admin portal at https://admin.ahmadnadeem.dev.
+Live at https://articles.ahmadnadeem.dev, with a private admin portal at https://admin.ahmadnadeem.dev.
 
 | Part | What it is | Where it runs |
 |---|---|---|

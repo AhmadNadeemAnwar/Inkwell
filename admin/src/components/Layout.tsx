@@ -1,6 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { Logo } from './Logo'
 
 const links = [
   { to: '/', label: 'Dashboard', end: true },
@@ -20,7 +19,7 @@ export function Layout() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="sidebar__brand"><Logo /> <span>Admin</span></div>
+        <div className="sidebar__brand">Articles <span>Admin</span></div>
 
         <nav className="sidebar__nav" aria-label="Sections">
           {links.map((link) => (

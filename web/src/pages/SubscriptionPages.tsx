@@ -72,7 +72,7 @@ export function ConfirmSubscriptionPage() {
   return (
     <TokenAction
       title="Confirm your subscription"
-      question="Press the button to start getting an email whenever a new article is published on Inkwell."
+      question="Press the button to start getting an email whenever a new article is published."
       button="Confirm my subscription"
       working="Confirming…"
       done={{ heading: 'You are subscribed', text: 'You will get a short email when a new article is published. Every email has an unsubscribe link.' }}
@@ -85,10 +85,10 @@ export function UnsubscribePage() {
   return (
     <TokenAction
       title="Unsubscribe"
-      question="Press the button to stop getting emails about new articles on Inkwell."
+      question="Press the button to stop getting emails about new articles."
       button="Unsubscribe me"
       working="Unsubscribing…"
-      done={{ heading: 'You are unsubscribed', text: 'You will not get any more emails from Inkwell. You are welcome back any time.' }}
+      done={{ heading: 'You are unsubscribed', text: 'You will not get any more emails from Articles. You are welcome back any time.' }}
       action={(token) => api.unsubscribe(token)}
     />
   )

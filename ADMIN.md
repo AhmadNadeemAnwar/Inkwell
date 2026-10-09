@@ -1,6 +1,6 @@
 # The admin portal
 
-A private site at **https://admin.ahmadnadeem.dev** for running Inkwell and editing your portfolio.
+A private site at **https://admin.ahmadnadeem.dev** for running Articles and editing your portfolio.
 
 | Section | What you can do |
 |---|---|
@@ -18,7 +18,7 @@ Sign-up stays closed. Only your own account can sign in, with your email and a c
 authenticator app. There is no password on this site: your phone is the key, so keep it locked.
 
 ```
- admin.ahmadnadeem.dev  ──>  Render API (Inkwell)  ──>  GitHub (private portfolio repo)
+ admin.ahmadnadeem.dev  ──>  Render API (Articles)  ──>  GitHub (private portfolio repo)
  Cloudflare Workers          /api/v1/admin/*            every save is a commit
                                                               │
                                                   Cloudflare rebuilds ahmadnadeem.dev
@@ -40,7 +40,7 @@ the rest of the portal works without them.
 ### 1. Create your authenticator secret (2 minutes)
 
 You need an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, Authy,
-1Password, any of them). From the `inkwell` folder, using your **Inkwell login email**:
+1Password, any of them). From the `inkwell` folder, using your **Articles login email**:
 
 ```powershell
 dotnet run --project tools/Inkwell.AdminSetup -- you@example.com
@@ -149,7 +149,7 @@ asks for no card. **If any step asks for payment details, stop**: do not enter t
    record set the proxy to **DNS only** (grey cloud). Back in Brevo press *Verify*; it can take a
    few minutes.
 3. **Add a sender.** In *Senders* add an address on your domain, for example
-   `inkwell@ahmadnadeem.dev`, with the name `Inkwell`. It does not need a mailbox to send, but replies
+   `articles@ahmadnadeem.dev`, with the name `Articles by Ahmad Nadeem`. It does not need a mailbox to send, but replies
    to it go nowhere unless you later set up forwarding (Cloudflare Email Routing is free).
 4. **Make an API key.** *SMTP & API* → *API Keys* → *Generate a new API key*. It is shown once.
 5. **Give it to the API.** On Render, open your service → *Environment* and add:
@@ -195,7 +195,7 @@ counted in the database, so a restart does not reset it.
    **Workers AI** template (or *Create Custom Token* with the permission *Account → Workers AI → Read*
    plus *Edit* if offered), restrict it to your account, and create it. Copy the token now; Cloudflare
    shows it once.
-3. **Give both to the API.** In Render open the Inkwell service → *Environment* and add
+3. **Give both to the API.** In Render open the Articles service → *Environment* and add
    `ImageGeneration__AccountId` (the id) and `ImageGeneration__ApiToken` (the token). Save; Render
    redeploys. Never paste the token into this repository, the workboard or a chat.
 4. **Try it.** In the editor add an *Image* section and press *Generate with AI*.
@@ -340,7 +340,7 @@ Admin actions are recorded in the API's logs (Render → Logs) with your email a
   server. They reset when Render restarts the service, which only gives an attacker a fresh window,
   not access.
 - The portfolio editor handles Markdown and the fields in your schema. It doesn't upload images; link to
-  images by URL for now. (Inkwell posts do upload images.)
+  images by URL for now. (Articles posts do upload images.)
 - A picture removed from a post stays in the database; there is no screen yet to delete unused ones.
 - Pictures are served by the API on Render, so the first one after the server has been idle is slow.
 - To try the portal on your own machine, the API's development settings include a throwaway admin
